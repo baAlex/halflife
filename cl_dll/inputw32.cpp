@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -166,6 +166,11 @@ HANDLE	s_hMouseDoneQuitEvent = 0;
 #endif
 
 
+#ifdef _WIN32
+SDL_bool mouseRelative = SDL_TRUE;
+#endif
+
+
 /*
 ===========
 Force_CenterView_f
@@ -243,6 +248,21 @@ void CL_DLLEXPORT IN_ActivateMouse (void)
 #endif
 		mouseactive = 1;
 	}
+
+#ifdef _WIN32
+	if (!m_bRawInput)
+	{
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+		mouseRelative = SDL_FALSE;
+	}
+	else
+	{
+		mouseRelative = SDL_TRUE;
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+	}
+#else
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+#endif
 }
 
 
@@ -263,6 +283,14 @@ void CL_DLLEXPORT IN_DeactivateMouse (void)
 
 		mouseactive = 0;
 	}
+
+#ifdef _WIN32
+	if (m_bRawInput)
+	{
+		mouseRelative = SDL_FALSE;
+	}
+#endif
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 }
 
 /*
@@ -501,6 +529,19 @@ void IN_MouseMove ( float frametime, usercmd_t *cmd)
 {
 	int		mx, my;
 	vec3_t viewangles;
+
+#ifdef _WIN32
+	if (!m_bRawInput && mouseRelative)
+	{
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+		mouseRelative = SDL_FALSE;
+	}
+	else if (m_bRawInput && !mouseRelative)
+	{
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+		mouseRelative = SDL_TRUE;
+	}
+#endif
 
 	gEngfuncs.GetViewAngles( (float *)viewangles );
 
