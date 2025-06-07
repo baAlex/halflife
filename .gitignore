@@ -1,0 +1,9 @@
+linux/release/
+dev/
+
+linux/dmc_cdll_map.txt
+linux/dmc_map.txt
+linux/hl_cdll_map.txt
+linux/hl_map.txt
+linux/ricochet_cdll_map.txt
+linux/ricochet_map.txt
