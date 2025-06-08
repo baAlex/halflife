@@ -35,6 +35,7 @@ DO_PM_SHARED_CC=$(CC) $(INCLUDEDIRS)  $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 #####################################################################
 
 HL1_OBJS = \
+	$(HL1_OBJ_DIR)/ic/hud.o \
 	$(HL1_OBJ_DIR)/hud_spectator.o \
 	$(HL1_OBJ_DIR)/ev_hldm.o \
 	$(HL1_OBJ_DIR)/hl/hl_baseentity.o \
@@ -118,6 +119,9 @@ COMMON_OBJS = \
 	$(COMMON_OBJ_DIR)/parsemsg.o \
 
 GAME_SHARED_OBJS = \
+	$(GAME_SHARED_OBJ_DIR)/ic/accuracy.o \
+	$(GAME_SHARED_OBJ_DIR)/ic/base.o \
+	$(GAME_SHARED_OBJ_DIR)/ic/vector.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_checkbutton2.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_grid.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_helpers.o \
@@ -148,6 +152,7 @@ endif
 $(HL1_OBJ_DIR):
 	mkdir -p $(HL1_OBJ_DIR)
 	mkdir -p $(HL1_OBJ_DIR)/hl
+	mkdir -p $(HL1_OBJ_DIR)/ic
 	mkdir -p $(HL1_OBJ_DIR)/dlls/wpn_shared
 	mkdir -p $(HL1_OBJ_DIR)/VGUI
 
@@ -163,6 +168,7 @@ $(COMMON_OBJ_DIR):
 
 $(GAME_SHARED_OBJ_DIR):
 	mkdir -p $(GAME_SHARED_OBJ_DIR)
+	mkdir -p $(GAME_SHARED_OBJ_DIR)/ic
 
 $(PM_SHARED_OBJ_DIR):
 	mkdir -p $(PM_SHARED_OBJ_DIR)
@@ -174,6 +180,9 @@ $(HL1_SERVER_OBJ_DIR)/%.o: $(HL_SERVER_SRC_DIR)/%.cpp $(filter-out $(wildcard  $
 	$(DO_CC)
 
 $(HL1_OBJ_DIR)/%.o: $(HL_SRC_DIR)/hl/%.cpp $(filter-out $(wildcard  $(HL1_OBJ_DIR)),  $(HL1_OBJ_DIR))
+	$(DO_CC)
+
+$(HL1_OBJ_DIR)/ic/%.o: $(HL_SRC_DIR)/ic/%.cpp $(filter-out $(wildcard  $(HL1_OBJ_DIR)),  $(HL1_OBJ_DIR))
 	$(DO_CC)
 
 $(HL1_OBJ_DIR)/%.o: $(HL_SRC_DIR)/dlls/wpn_shared/%.cpp $(filter-out $(wildcard  $(HL1_OBJ_DIR)),  $(HL1_OBJ_DIR))
@@ -189,6 +198,9 @@ $(COMMON_OBJ_DIR)/%.o : $(COMMON_SRC_DIR)/%.cpp $(filter-out $(wildcard  $(COMMO
 	$(DO_COMMON_CC)
 
 $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp $(filter-out $(wildcard  $(GAME_SHARED_OBJ_DIR)),  $(GAME_SHARED_OBJ_DIR))
+	$(DO_COMMON_CC)
+
+$(GAME_SHARED_OBJ_DIR)/ic/%.o : $(GAME_SHARED_SRC_DIR)/ic/%.cpp $(filter-out $(wildcard  $(GAME_SHARED_OBJ_DIR)),  $(GAME_SHARED_OBJ_DIR))
 	$(DO_COMMON_CC)
 
 $(PM_SHARED_OBJ_DIR)/%.o : $(PM_SHARED_SRC_DIR)/%.c $(filter-out $(wildcard  $(PM_SHARED_OBJ_DIR)),  $(PM_SHARED_OBJ_DIR))

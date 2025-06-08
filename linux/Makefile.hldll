@@ -140,6 +140,9 @@ PM_OBJS = \
 	$(PM_OBJ_DIR)/pm_debug.o
 
 GAME_SHARED_OBJS = \
+	$(GAME_SHARED_OBJ_DIR)/ic/accuracy.o \
+	$(GAME_SHARED_OBJ_DIR)/ic/base.o \
+	$(GAME_SHARED_OBJ_DIR)/ic/vector.o \
 	$(GAME_SHARED_OBJ_DIR)/voice_gamemgr.o
 
 all: dirs hl.$(SHLIBEXT)
@@ -150,6 +153,7 @@ dirs:
 	-mkdir -p $(HLWPN_OBJ_DIR)
 	-mkdir -p $(PM_OBJ_DIR)
 	-mkdir -p $(GAME_SHARED_OBJ_DIR)
+	-mkdir -p $(GAME_SHARED_OBJ_DIR)/ic
 
 hl.$(SHLIBEXT): $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
 	$(CC) $(LDFLAGS) $(SHLIBLDFLAGS) -o $(BUILD_DIR)/$@ $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
@@ -170,6 +174,9 @@ $(PM_OBJ_DIR)/%.o : $(PM_SRC_DIR)/%.c
 	$(DO_PM_CC)
 
 $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp
+	$(DO_GAME_SHARED_CC)
+
+$(GAME_SHARED_OBJ_DIR)/ic/%.o : $(GAME_SHARED_SRC_DIR)/ic/%.cpp
 	$(DO_GAME_SHARED_CC)
 
 clean:

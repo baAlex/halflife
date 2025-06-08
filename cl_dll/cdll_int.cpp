@@ -46,6 +46,10 @@ extern "C"
 #include "vgui_TeamFortressViewport.h"
 #include "../public/interface.h"
 
+
+#include "ic/hud.hpp"
+
+
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
 TeamFortressViewport *gViewPort = NULL;
@@ -178,6 +182,8 @@ int CL_DLLEXPORT HUD_VidInit( void )
 
 	VGui_Startup();
 
+	Ic::HudInitialise();
+
 	return 1;
 }
 
@@ -197,6 +203,8 @@ void CL_DLLEXPORT HUD_Init( void )
 	InitInput();
 	gHUD.Init();
 	Scheme_Init();
+
+	Ic::HudSoftInitialise();
 }
 
 
@@ -214,6 +222,8 @@ int CL_DLLEXPORT HUD_Redraw( float time, int intermission )
 //	RecClHudRedraw(time, intermission);
 
 	gHUD.Redraw( time, intermission );
+
+	Ic::HudDraw(time);
 
 	return 1;
 }
@@ -254,6 +264,8 @@ void CL_DLLEXPORT HUD_Reset( void )
 //	RecClHudReset();
 
 	gHUD.VidInit();
+
+	Ic::HudSoftInitialise();
 }
 
 /*
