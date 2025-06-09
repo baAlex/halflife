@@ -38,8 +38,8 @@ static constexpr float LOOK_SMOOTH[2] = {12.0f, 5.0f}; // Not here
 static constexpr float AIR_SMOOTH = 7.0f;
 static constexpr float CROUCH_SMOOTH = 3.0f;
 
-static constexpr float WALK_CONTRIBUTION = 0.4f;
-static constexpr float LOOK_CONTRIBUTION = 0.55f;
+static constexpr float WALK_CONTRIBUTION = 0.5f;
+static constexpr float LOOK_CONTRIBUTION = 0.4f;
 static constexpr float AIR_CONTRIBUTION = 0.3f;
 static constexpr float CROUCH_MAX = 0.3f;
 static constexpr float CROUCH_MIN = 0.15f;

@@ -2787,6 +2787,19 @@ void CBasePlayer::PostThink()
 
 	UpdatePlayerSound();
 
+
+	{
+		// (baAlex)
+		//m_accuracy.Sample({pev->origin.x, pev->origin.y}, {pev->v_angle.x, pev->v_angle.y},
+		//                  ((pev->flags & FL_DUCKING) != 0) ? 1 : 0, ((pev->flags & FL_ONGROUND) != 0) ? 0 : 1,
+		//                  Ic::PLAYER_MAX_SPEED, gpGlobals->frametime);
+		m_accuracy.Sample({pev->origin.x, pev->origin.y}, {pev->v_angle.x, pev->v_angle.y},
+		                  ((pev->button & IN_DUCK) != 0) ? 1 : 0, ((pev->flags & FL_ONGROUND) != 0) ? 0 : 1,
+		                  Ic::PLAYER_MAX_SPEED, gpGlobals->frametime);
+		// ALERT(at_notice, "%f\n", m_accuracy.Get());
+	}
+
+
 pt_end:
 #if defined( CLIENT_WEAPONS )
 		// Decay timers on weapons
@@ -3083,6 +3096,11 @@ void CBasePlayer::Spawn( void )
 	m_lastx = m_lasty = 0;
 	
 	m_flNextChatTime = gpGlobals->time;
+
+	{
+		// (baAlex)
+		m_accuracy.Initialise();
+	}
 
 	g_pGameRules->PlayerSpawn( this );
 }

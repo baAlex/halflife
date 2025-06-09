@@ -1729,7 +1729,18 @@ void UpdateClientData ( const edict_t *ent, int sendweapons, struct clientdata_s
 		cd->iuser2			= pev->iuser2;
 	}
 
-	
+
+	{
+		// (baAlex)
+		cd->vuser3.x = pl->m_accuracy.Get() * 256.0f;
+		
+		// (https://twhl.info/wiki/page/Weapons_Programming_-_Custom_Ammo_Types/5776#h5e3a7a02bebe2)
+		// Few "user" variables are available:
+		//    iuser3, iuser4, fuser1, fuser4, vuser3.x, vuser3.y
+
+		// And according to "delta.lst", is quantized, transmitted in 10 bits
+	}
+
 
 #if defined( CLIENT_WEAPONS )
 	if ( sendweapons )

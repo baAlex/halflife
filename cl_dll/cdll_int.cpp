@@ -47,11 +47,18 @@ extern "C"
 #include "../public/interface.h"
 
 #include "pm_movevars.h"
+#include "pm_defs.h"
+#include "usercmd.h"
 
 
 #include "ic/hud.hpp"
 #include "ic/messages.hpp"
 #include "ic/view.hpp"
+#include "ic/accuracy.hpp"
+#include "ic/game_constants.hpp"
+
+
+static Ic::Accuracy s_client_side_accuracy;
 
 
 cl_enginefunc_t gEngfuncs;
@@ -148,6 +155,8 @@ void CL_DLLEXPORT HUD_PlayerMove( struct playermove_s *ppmove, int server )
 //	RecClClientMove(ppmove, server);
 
 	PM_Move( ppmove, server );
+
+	Ic::MessagesSetAccuracy(Ic::Side::Server, ppmove->vuser3.x / 256.0f);
 }
 
 int CL_DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
@@ -190,6 +199,8 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	Ic::MessagesInitialise();
 	Ic::ViewInitialise();
 
+	s_client_side_accuracy.Initialise();
+
 	return 1;
 }
 
@@ -213,6 +224,8 @@ void CL_DLLEXPORT HUD_Init( void )
 	Ic::HudSoftInitialise();
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
+
+	s_client_side_accuracy.Initialise();
 }
 
 
@@ -276,6 +289,8 @@ void CL_DLLEXPORT HUD_Reset( void )
 	Ic::HudSoftInitialise();
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
+
+	s_client_side_accuracy.Initialise();
 }
 
 /*
@@ -304,10 +319,18 @@ V_CalcRefdef
 */
 void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 {
-	Ic::ViewUpdate(pparams);
+	s_client_side_accuracy.Sample({pparams->simorg[0], pparams->simorg[1]},
+		{pparams->cl_viewangles[0], pparams->cl_viewangles[1]},
+		pparams->cmd->buttons & IN_DUCK, (pparams->onground == 0) ? 1 : 0,
+		Ic::PLAYER_MAX_SPEED, pparams->frametime);
+
+	Ic::MessagesSetAccuracy(Ic::Side::Client, s_client_side_accuracy.Get());
+
 	Ic::MessagesSetSpeed(sqrtf(pparams->simvel[0] * pparams->simvel[0] +
 		pparams->simvel[1] * pparams->simvel[1]),
 		pparams->movevars->maxspeed);
+
+	Ic::ViewUpdate(pparams);
 }
 
 

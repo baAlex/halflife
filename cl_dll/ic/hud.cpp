@@ -35,6 +35,7 @@ static float s_prev_time;
 
 
 static constexpr int WHITE[3] = {255, 255, 255};
+static constexpr int ACCENT[3] = {234, 0, 39};
 
 
 static int sFontHeight(HSPRITE font)
@@ -80,8 +81,6 @@ class DevDashboard
 		m_dev_font = gEngfuncs.pfnSPR_Load("sprites/480-font-dev.spr");
 	}
 
-	void SoftInitialise() {}
-
 	void Draw(float time, float dt)
 	{
 		(void)time;
@@ -108,7 +107,70 @@ class DevDashboard
 };
 
 
+class Crosshair
+{
+	// Seems like I'm in a good direction, crosshair here looks identical to the one
+	// from Day of Defeat (including bleeding, blur). The one in Counter Strike tho,
+	// seems to be using TriangleApi as is quite sharp and thin.
+
+	static constexpr int OFFSET = 1;
+
+	static constexpr int MINIMUM_GAP = 2;
+	static constexpr float AMPLITUDE = 70.0f;
+
+	HSPRITE m_horizontal;
+	HSPRITE m_vertical;
+
+	int m_h_w;
+	int m_v_h;
+
+  public:
+	void Initialise()
+	{
+		m_horizontal = gEngfuncs.pfnSPR_Load("sprites/480-crosshair-h.spr");
+		m_vertical = gEngfuncs.pfnSPR_Load("sprites/480-crosshair-v.spr");
+
+		m_h_w = gEngfuncs.pfnSPR_Width(m_horizontal, 0);
+		m_v_h = gEngfuncs.pfnSPR_Height(m_vertical, 0);
+	}
+
+	void Draw(float time, float dt)
+	{
+		(void)time;
+		(void)dt;
+		struct rect_s rect;
+
+		{
+			// Accuracy should be around 0,1
+			const int gap = MINIMUM_GAP + static_cast<int>(roundf(Ic::GetAccuracy(Ic::Side::Client) * AMPLITUDE));
+
+			gEngfuncs.pfnSPR_Set(m_horizontal, ACCENT[0], ACCENT[1], ACCENT[2]);
+			gEngfuncs.pfnSPR_DrawHoles(0, s_screen.iWidth / 2 + gap, s_screen.iHeight / 2 - OFFSET, &rect);
+			gEngfuncs.pfnSPR_DrawHoles(1, s_screen.iWidth / 2 - gap - m_h_w, s_screen.iHeight / 2 - OFFSET, &rect);
+
+			gEngfuncs.pfnSPR_Set(m_vertical, ACCENT[0], ACCENT[1], ACCENT[2]);
+			gEngfuncs.pfnSPR_DrawHoles(0, s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 + gap, &rect);
+			gEngfuncs.pfnSPR_DrawHoles(1, s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 - gap - m_v_h, &rect);
+		}
+
+		if (s_developer_level > 1)
+		{
+			const int gap = MINIMUM_GAP + static_cast<int>(roundf(Ic::GetAccuracy(Ic::Side::Server) * AMPLITUDE));
+
+			gEngfuncs.pfnSPR_Set(m_horizontal, WHITE[0], WHITE[1], WHITE[2]);
+			gEngfuncs.pfnSPR_DrawHoles(0, s_screen.iWidth / 2 + gap, 4 + s_screen.iHeight / 2 - OFFSET, &rect);
+			gEngfuncs.pfnSPR_DrawHoles(1, s_screen.iWidth / 2 - gap - m_h_w, -4 + s_screen.iHeight / 2 - OFFSET, &rect);
+
+			gEngfuncs.pfnSPR_Set(m_vertical, WHITE[0], WHITE[1], WHITE[2]);
+			gEngfuncs.pfnSPR_DrawHoles(0, -4 + s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 + gap, &rect);
+			gEngfuncs.pfnSPR_DrawHoles(1, 4 + s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 - gap - m_v_h, &rect);
+		}
+	}
+};
+
+
 static DevDashboard s_dev_dashboard;
+static Crosshair s_crosshair;
 
 
 void Ic::HudInitialise()
@@ -121,6 +183,7 @@ void Ic::HudInitialise()
 	gEngfuncs.pfnAddCommand("dev_dashboard", []() { s_developer_level = (s_developer_level + 1) % 3; });
 
 	s_dev_dashboard.Initialise();
+	s_crosshair.Initialise();
 
 	HudSoftInitialise();
 }
@@ -140,4 +203,9 @@ void Ic::HudDraw(float time)
 	s_prev_time = time;
 
 	s_dev_dashboard.Draw(time, dt);
+
+	if (Ic::GetIfDead() == true)
+		return;
+
+	s_crosshair.Draw(time, dt);
 }

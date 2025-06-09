@@ -19,6 +19,10 @@
 #include "pm_materials.h"
 
 
+#include "ic/accuracy.hpp"
+#include "ic/game_constants.hpp"
+
+
 #define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
 #define PLAYER_MAX_SAFE_FALL_SPEED	580// approx 20 feet
 #define DAMAGE_FOR_FALL_SPEED		(float) 100 / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED )// damage per unit per second.
@@ -327,6 +331,9 @@ public:
 	float m_flNextChatTime;
 	
 	int	m_iAutoWepSwitch;
+
+	// (baAlex)
+	Ic::Accuracy m_accuracy;
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025
