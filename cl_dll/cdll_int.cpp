@@ -184,6 +184,7 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	VGui_Startup();
 
 	Ic::HudInitialise();
+	Ic::ViewInitialise();
 
 	return 1;
 }
@@ -206,6 +207,7 @@ void CL_DLLEXPORT HUD_Init( void )
 	Scheme_Init();
 
 	Ic::HudSoftInitialise();
+	Ic::ViewInitialise();
 }
 
 
@@ -267,6 +269,7 @@ void CL_DLLEXPORT HUD_Reset( void )
 	gHUD.VidInit();
 
 	Ic::HudSoftInitialise();
+	Ic::ViewInitialise();
 }
 
 /*

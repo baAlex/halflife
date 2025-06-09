@@ -16,6 +16,15 @@ defined by the Mozilla Public License, v. 2.0.
 namespace Ic
 {
 
+#if defined(__GNUC__) || defined(__clang__)
+// Is more about the intent that the actual effect
+#define IC_LIKELY(expr) (__builtin_expect(!!(expr), 1))
+#define IC_UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
+#else
+#define IC_LIKELY(x) (x)
+#define IC_UNLIKELY(x) (x)
+#endif
+
 // clang-format off
 template <typename T> T Min(T a, T b) { return (a < b) ? a : b; }
 template <typename T> T Max(T a, T b) { return (a > b) ? a : b; }

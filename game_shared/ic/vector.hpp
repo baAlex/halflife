@@ -27,6 +27,11 @@ struct Vector2
 	{
 		return (index == 0) ? x : y;
 	}
+
+	inline const float& operator[](int index) const
+	{
+		return (index == 0) ? x : y;
+	}
 };
 
 struct Vector3
@@ -39,6 +44,13 @@ struct Vector3
 
 	// clang-format off
 	inline float& operator[](int index)
+	{
+		if (index == 0) return x;
+		if (index == 1) return y;
+		return z;
+	}
+
+	inline const float& operator[](int index) const
 	{
 		if (index == 0) return x;
 		if (index == 1) return y;
@@ -58,6 +70,14 @@ struct Vector4
 
 	// clang-format off
 	inline float& operator[](int index)
+	{
+		if (index == 0) return x;
+		if (index == 1) return y;
+		if (index == 2) return z;
+		return w;
+	}
+
+	inline const float& operator[](int index) const
 	{
 		if (index == 0) return x;
 		if (index == 1) return y;
