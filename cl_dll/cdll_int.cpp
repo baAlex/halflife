@@ -48,6 +48,7 @@ extern "C"
 
 
 #include "ic/hud.hpp"
+#include "ic/view.hpp"
 
 
 cl_enginefunc_t gEngfuncs;
@@ -283,6 +284,18 @@ void CL_DLLEXPORT HUD_Frame( double time )
 	ServersThink( time );
 
 	GetClientVoiceMgr()->Frame(time);
+}
+
+
+/*
+==========================
+V_CalcRefdef
+
+==========================
+*/
+void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
+{
+	Ic::ViewUpdate(pparams);
 }
 
 

@@ -1634,7 +1634,7 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 }
 
 
-
+#if 0 // (baAlex)
 void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 {
 //	RecClCalcRefdef(pparams);
@@ -1672,6 +1672,8 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 #endif
 */
 }
+#endif
+
 
 /*
 =============
