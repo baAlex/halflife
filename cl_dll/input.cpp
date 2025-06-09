@@ -25,6 +25,7 @@ extern "C"
 #include "vgui_TeamFortressViewport.h"
 
 
+#include "ic/base.hpp"
 #include "ic/messages.hpp"
 
 
@@ -668,6 +669,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	vec3_t viewangles;
 	static vec3_t oldangles;
 
+	const float max_max_speed = Ic::Max(cl_sidespeed->value, Ic::Max(cl_backspeed->value, cl_forwardspeed->value));
+
 	if ( active && !Bench_Active() )
 	{
 		//memset( viewangles, 0, sizeof( vec3_t ) );
@@ -697,6 +700,21 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
 			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		}	
+
+		// (baAlex) Clip to a configurable maximum speed,
+		// by that I mean that "sv_maxspeed" cannot be set in a non hacky way,
+		// so this is a sightly better alternative
+		if (max_max_speed != 0.0f)
+		{
+			float fmov = sqrtf((cmd->forwardmove * cmd->forwardmove) + (cmd->sidemove * cmd->sidemove));
+
+			if (fmov > max_max_speed)
+			{
+				float fratio = max_max_speed / fmov;
+				cmd->forwardmove *= fratio;
+				cmd->sidemove *= fratio;
+			}
+		}
 
 		// adjust for speed key
 		if ( in_speed.state & 1 )
@@ -992,8 +1010,8 @@ void InitInput (void)
 	cl_upspeed			= gEngfuncs.pfnRegisterVariable ( "cl_upspeed", "320", 0 );
 	cl_forwardspeed		= gEngfuncs.pfnRegisterVariable ( "cl_forwardspeed", "400", FCVAR_ARCHIVE );
 	cl_backspeed		= gEngfuncs.pfnRegisterVariable ( "cl_backspeed", "400", FCVAR_ARCHIVE );
-	cl_sidespeed		= gEngfuncs.pfnRegisterVariable ( "cl_sidespeed", "400", 0 );
-	cl_movespeedkey		= gEngfuncs.pfnRegisterVariable ( "cl_movespeedkey", "0.3", 0 );
+	cl_sidespeed		= gEngfuncs.pfnRegisterVariable ( "cl_sidespeed", "400", FCVAR_ARCHIVE );
+	cl_movespeedkey		= gEngfuncs.pfnRegisterVariable ( "cl_movespeedkey", "0.3", FCVAR_ARCHIVE );
 	cl_pitchup			= gEngfuncs.pfnRegisterVariable ( "cl_pitchup", "89", 0 );
 	cl_pitchdown		= gEngfuncs.pfnRegisterVariable ( "cl_pitchdown", "89", 0 );
 

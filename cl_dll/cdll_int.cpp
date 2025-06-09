@@ -46,6 +46,8 @@ extern "C"
 #include "vgui_TeamFortressViewport.h"
 #include "../public/interface.h"
 
+#include "pm_movevars.h"
+
 
 #include "ic/hud.hpp"
 #include "ic/messages.hpp"
@@ -303,6 +305,9 @@ V_CalcRefdef
 void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 {
 	Ic::ViewUpdate(pparams);
+	Ic::MessagesSetSpeed(sqrtf(pparams->simvel[0] * pparams->simvel[0] +
+		pparams->simvel[1] * pparams->simvel[1]),
+		pparams->movevars->maxspeed);
 }
 
 

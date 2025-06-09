@@ -989,6 +989,7 @@ PM_Accelerate
 */
 void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 {
+#if 0 // (baAlex)
 	int			i;
 	float		addspeed, accelspeed, currentspeed;
 
@@ -1022,6 +1023,48 @@ void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 	{
 		pmove->velocity[i] += accelspeed * wishdir[i];	
 	}
+#else
+
+	// John Carmack. Quake III Arena source code. 1999
+	// File: "bg_pmove.c", line 260, in PM_Accelerate()
+	// https://github.com/id-Software/Quake-III-Arena/blob/dbe4ddb10315479fc00086f08e25d968b4b43c49/code/game/bg_pmove.c#L260
+
+	// Lil' code snippet that hopefully falls under public domain
+	// (by virtue of being short). This bit was in the code, but
+	// disabled, it never saw the light of day. It has no mercy for
+	// momentum so is lovely for ground movement (it feels responsive).
+
+	// And since you're reading this, let me inform you that this
+	// function I'm replacing here is rather famous, so here, not three
+	// but two video essays, should you fancy a new fixation:
+
+	// Matt's Ramblings. "The code behind Quake's movement tricks explained (bunny-hopping, wall-running, and zig-zagging)". 2021.
+	// https://youtu.be/v3zT3Z5apaM?si=9wNcjkewOXlla6rN
+
+	// zweek. "Okay, but how does airstrafing ACTUALLY work?". 2024
+	// https://youtu.be/gRqoXy-0d84?si=FeR2cjptUrEt-Q9m
+
+	// Oh, and below I also cited yet another article on same function.
+
+	vec3_t wish_velocity;
+	vec3_t diff_dir;
+
+	if (pmove->dead)
+		return;
+	if (pmove->waterjumptime)
+		return;
+
+	VectorScale(wishdir, wishspeed, wish_velocity);
+	VectorSubtract(wish_velocity, pmove->velocity, diff_dir);
+
+	float diff_length = VectorNormalize(diff_dir);
+
+	float length = accel * pmove->frametime * wishspeed * pmove->friction;
+	if (length > diff_length)
+		length = diff_length;
+
+	VectorMA(pmove->velocity, length, diff_dir, pmove->velocity);
+#endif
 }
 
 /*
@@ -1278,6 +1321,7 @@ void PM_Friction (void)
 
 void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 {
+#if 0 // (baAlex)
 	int			i;
 	float		addspeed, accelspeed, currentspeed, wishspd = wishspeed;
 		
@@ -1310,6 +1354,32 @@ void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 	{
 		pmove->velocity[i] += accelspeed*wishdir[i];	
 	}
+#endif
+
+#if 1 // (baAlex)
+
+	// Adrian Biagioli, "Bunnyhopping from the Programmer's Perspective". 2015
+	// https://adrianb.io/2015/02/14/bunnyhop.html
+
+	// A clean version of above code... it seems??, hopefully.
+	// (sorry lad, no brain cells right now, have a good day)
+
+	if (pmove->dead)
+		return;
+	if (pmove->waterjumptime)
+		return;
+
+	wishspeed /= 7.0f; // This is like set "sv_airaccelerate 1.4"
+
+	const float projected = DotProduct(pmove->velocity, wishdir);
+	float accel_speed = accel * pmove->frametime * wishspeed * pmove->friction;
+
+	if (projected + accel_speed > wishspeed)
+		accel_speed = wishspeed - projected;
+
+	if (accel_speed > 0.0f)
+		VectorMA(pmove->velocity, accel_speed, wishdir, pmove->velocity);
+#endif
 }
 
 /*
