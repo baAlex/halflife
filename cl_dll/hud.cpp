@@ -353,7 +353,7 @@ void CHud :: Init( void )
 	m_flTime = 1.0;
 
 	m_Ammo.Init();
-	m_Health.Init();
+	// m_Health.Init(); // (baAlex)
 	m_SayText.Init();
 	m_Spectator.Init();
 	m_Geiger.Init();
@@ -512,7 +512,7 @@ void CHud :: VidInit( void )
 	m_iFontHeight = m_rgrcRects[m_HUD_number_0].bottom - m_rgrcRects[m_HUD_number_0].top;
 
 	m_Ammo.VidInit();
-	m_Health.VidInit();
+	// m_Health.VidInit(); // (baAlex)
 	m_Spectator.VidInit();
 	m_Geiger.VidInit();
 	m_Train.VidInit();

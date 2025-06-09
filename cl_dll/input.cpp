@@ -25,6 +25,9 @@ extern "C"
 #include "vgui_TeamFortressViewport.h"
 
 
+#include "ic/messages.hpp"
+
+
 extern int g_iAlive;
 
 extern int g_weaponselect;
@@ -773,10 +776,12 @@ CL_IsDead
 Returns 1 if health is <= 0
 ============
 */
+#if 0 // (baAlex)
 int	CL_IsDead( void )
 {
 	return ( gHUD.m_Health.m_iHealth <= 0 ) ? 1 : 0;
 }
+#endif
 
 /*
 ============
@@ -866,7 +871,7 @@ int CL_ButtonBits( int bResetState )
 	}
 
 	// Dead or in intermission? Shore scoreboard, too
-	if ( CL_IsDead() || gHUD.m_iIntermission )
+	if ( Ic::GetIfDead() == true || gHUD.m_iIntermission )
 	{
 		bits |= IN_SCORE;
 	}

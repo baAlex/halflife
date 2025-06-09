@@ -48,6 +48,7 @@ extern "C"
 
 
 #include "ic/hud.hpp"
+#include "ic/messages.hpp"
 #include "ic/view.hpp"
 
 
@@ -184,6 +185,7 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	VGui_Startup();
 
 	Ic::HudInitialise();
+	Ic::MessagesInitialise();
 	Ic::ViewInitialise();
 
 	return 1;
@@ -207,6 +209,7 @@ void CL_DLLEXPORT HUD_Init( void )
 	Scheme_Init();
 
 	Ic::HudSoftInitialise();
+	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
 }
 
@@ -269,6 +272,7 @@ void CL_DLLEXPORT HUD_Reset( void )
 	gHUD.VidInit();
 
 	Ic::HudSoftInitialise();
+	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
 }
 

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -17,7 +17,7 @@
 #include "Exports.h"
 
 void			COM_Log( char *pszFile, char *fmt, ...);
-int				CL_IsDead( void );
+// int				CL_IsDead( void ); // (baAlex)
 
 float			UTIL_SharedRandomFloat( unsigned int seed, float low, float high );
 int				UTIL_SharedRandomLong( unsigned int seed, int low, int high );
