@@ -10,15 +10,20 @@ This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0.
 */
 
+#include <math.h>
+
 #include "weapons.hpp"
-#include "base.hpp"
 
 
+#if 0
 #ifndef CLIENT_DLL
 #include "extdll.h"
 #include "enginecallback.h"
 
 #define PRINTF(...) g_engfuncs.pfnAlertMessage(at_console, __VA_ARGS__)
+#endif
+#else
+#define PRINTF(...) // Nothing
 #endif
 
 
@@ -26,7 +31,7 @@ constexpr float EPSILON = 0.001f;
 static double s_time_empty = 0.0;
 
 
-void Ic::ClosedBoltBehaviour::Initialise(const Properties* p)
+void Ic::ClosedBoltBehaviour::Initialise(const Properties* p, WeaponState* out_state)
 {
 	m_time = 0.0;
 
@@ -39,14 +44,24 @@ void Ic::ClosedBoltBehaviour::Initialise(const Properties* p)
 	m_pressed = 0;
 	m_first_fire = 0.0;
 	m_fired_so_far = 0;
+
+	// Returns to outside world
+	out_state->rounds_fired = 0;
+	out_state->chamber = m_chamber;
+	out_state->magazine = m_magazine;
 }
 
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::ClosedBoltBehaviour::Frame(const Properties* p, float dt)
+void Ic::ClosedBoltBehaviour::Frame(const Properties* p, float dt, WeaponState* out_state)
 {
-	FrameOutput ret = {};
-
 	m_time += static_cast<Timer>(dt);
+
+	// Set some assumptions to return
+	{
+		out_state->rounds_fired = 0;
+		out_state->chamber = m_chamber;
+		out_state->magazine = m_magazine;
+	}
 
 	// Should we chamber it? (cock it)
 	if (m_chamber == 0)
@@ -89,13 +104,9 @@ Ic::ClosedBoltBehaviour::FrameOutput Ic::ClosedBoltBehaviour::Frame(const Proper
 		m_chamber = 0;
 		m_bolt_ready = m_time + p->bolt_travel_duration; // Aka: when weapon will be ready for fire
 
-		// Return to outside world
-		ret.magazine = m_magazine;
-		ret.rounds_fired = to_fire;
-
 		// Leave it automatically chambered for next fire
 		// (that is what a moving bolt do in automatic and semi weapons)
-		if ((p->mode == Mode::Automatic || p->mode == Mode::Semi) && m_magazine > 0)
+		if ((p->mode == WeaponMode::Automatic || p->mode == WeaponMode::Semi) && m_magazine > 0)
 		{
 			m_magazine -= 1;
 			m_chamber = 1;
@@ -103,16 +114,21 @@ Ic::ClosedBoltBehaviour::FrameOutput Ic::ClosedBoltBehaviour::Frame(const Proper
 
 		// Release trigger if semi
 		// (in those weapons the trigger generally disengage or block some movable piece)
-		if (p->mode == Mode::Semi)
+		if (p->mode == WeaponMode::Semi)
 			m_pressed = 0;
 
 		// Release trigger and require cock, if manual
-		else if (p->mode == Mode::Manual)
+		else if (p->mode == WeaponMode::Manual)
 		{
 			// Notice how 'm_chamber' remains empty
 			m_pressed = 0;
 			m_cock_done = m_time + p->cock_duration;
 		}
+
+		// Returns to outside world
+		out_state->rounds_fired = to_fire;
+		out_state->chamber = m_chamber;
+		out_state->magazine = m_magazine;
 
 		// Developers, developers, developers
 		if (1)
@@ -122,8 +138,6 @@ Ic::ClosedBoltBehaviour::FrameOutput Ic::ClosedBoltBehaviour::Frame(const Proper
 				s_time_empty = m_time;
 		}
 	}
-
-	return ret;
 }
 
 
@@ -197,17 +211,26 @@ void Ic::ClosedBoltBehaviour::Reload(const Properties* p)
 
 void Ic::PistolWeapon::Initialise()
 {
-	m_p.mode = Ic::ClosedBoltBehaviour::Mode::Semi;
+	m_prev_state = {};
+
+	m_p.mode = Ic::WeaponMode::Semi;
 	m_p.bolt_travel_duration = 60.0 / 2000.0;
 	m_p.magazine_size = 17;
 	m_p.cock_duration = 0.2;
 
-	m_behaviour.Initialise(&m_p);
+	m_behaviour.Initialise(&m_p, &m_prev_state);
 }
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::PistolWeapon::Frame(float dt)
+Ic::WeaponState Ic::PistolWeapon::Frame(float dt)
 {
-	return m_behaviour.Frame(&m_p, dt);
+	Ic::WeaponState ret = m_prev_state;
+
+	m_behaviour.Frame(&m_p, dt, &ret);
+
+	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	m_prev_state = ret;
+
+	return ret;
 }
 
 void Ic::PistolWeapon::Trigger(int gesture)
@@ -220,7 +243,7 @@ void Ic::PistolWeapon::Reload()
 	return m_behaviour.Reload(&m_p);
 }
 
-Ic::ClosedBoltBehaviour::Mode Ic::PistolWeapon::CycleMode()
+Ic::WeaponMode Ic::PistolWeapon::CycleMode()
 {
 	return m_p.mode;
 }
@@ -231,17 +254,27 @@ Ic::ClosedBoltBehaviour::Mode Ic::PistolWeapon::CycleMode()
 
 void Ic::ShotgunWeapon::Initialise()
 {
-	m_p.mode = Ic::ClosedBoltBehaviour::Mode::Semi;
+	m_prev_state = {};
+
+	m_p.mode = Ic::WeaponMode::Semi;
 	m_p.bolt_travel_duration = 60.0 / 350.0;
 	m_p.magazine_size = 7;
 	m_p.cock_duration = .5;
 
-	m_behaviour.Initialise(&m_p);
+	m_behaviour.Initialise(&m_p, &m_prev_state);
 }
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::ShotgunWeapon::Frame(float dt)
+Ic::WeaponState Ic::ShotgunWeapon::Frame(float dt)
 {
-	return m_behaviour.Frame(&m_p, dt);
+	Ic::WeaponState ret = m_prev_state;
+	ret.mode = m_p.mode; // May have changed
+
+	m_behaviour.Frame(&m_p, dt, &ret);
+
+	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	m_prev_state = ret;
+
+	return ret;
 }
 
 void Ic::ShotgunWeapon::Trigger(int gesture)
@@ -254,10 +287,9 @@ void Ic::ShotgunWeapon::Reload()
 	return m_behaviour.Reload(&m_p);
 }
 
-Ic::ClosedBoltBehaviour::Mode Ic::ShotgunWeapon::CycleMode()
+Ic::WeaponMode Ic::ShotgunWeapon::CycleMode()
 {
-	m_p.mode = (m_p.mode == ClosedBoltBehaviour::Mode::Semi) ? ClosedBoltBehaviour::Mode::Manual
-	                                                         : ClosedBoltBehaviour::Mode::Semi;
+	m_p.mode = (m_p.mode == WeaponMode::Semi) ? WeaponMode::Manual : WeaponMode::Semi;
 
 	PRINTF("ShotgunWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
@@ -270,17 +302,27 @@ Ic::ClosedBoltBehaviour::Mode Ic::ShotgunWeapon::CycleMode()
 
 void Ic::SmgWeapon::Initialise()
 {
-	m_p.mode = Ic::ClosedBoltBehaviour::Mode::Automatic;
+	m_prev_state = {};
+
+	m_p.mode = Ic::WeaponMode::Automatic;
 	m_p.bolt_travel_duration = 60.0 / 1100.0; // This is different, in comparison the MP5 is 850 just like an AR
 	m_p.magazine_size = 20;
 	m_p.cock_duration = 0.25;
 
-	m_behaviour.Initialise(&m_p);
+	m_behaviour.Initialise(&m_p, &m_prev_state);
 }
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::SmgWeapon::Frame(float dt)
+Ic::WeaponState Ic::SmgWeapon::Frame(float dt)
 {
-	return m_behaviour.Frame(&m_p, dt);
+	Ic::WeaponState ret = m_prev_state;
+	ret.mode = m_p.mode; // May have changed
+
+	m_behaviour.Frame(&m_p, dt, &ret);
+
+	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	m_prev_state = ret;
+
+	return ret;
 }
 
 void Ic::SmgWeapon::Trigger(int gesture)
@@ -293,10 +335,9 @@ void Ic::SmgWeapon::Reload()
 	return m_behaviour.Reload(&m_p);
 }
 
-Ic::ClosedBoltBehaviour::Mode Ic::SmgWeapon::CycleMode()
+Ic::WeaponMode Ic::SmgWeapon::CycleMode()
 {
-	m_p.mode = (m_p.mode == ClosedBoltBehaviour::Mode::Automatic) ? ClosedBoltBehaviour::Mode::Semi
-	                                                              : ClosedBoltBehaviour::Mode::Automatic;
+	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
 
 	PRINTF("SmgWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
@@ -308,17 +349,27 @@ Ic::ClosedBoltBehaviour::Mode Ic::SmgWeapon::CycleMode()
 
 void Ic::ArWeapon::Initialise()
 {
-	m_p.mode = Ic::ClosedBoltBehaviour::Mode::Automatic;
+	m_prev_state = {};
+
+	m_p.mode = Ic::WeaponMode::Automatic;
 	m_p.bolt_travel_duration = 60.0 / 850.0;
 	m_p.magazine_size = 30; // NATO be like this
 	m_p.cock_duration = 0.25;
 
-	m_behaviour.Initialise(&m_p);
+	m_behaviour.Initialise(&m_p, &m_prev_state);
 }
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::ArWeapon::Frame(float dt)
+Ic::WeaponState Ic::ArWeapon::Frame(float dt)
 {
-	return m_behaviour.Frame(&m_p, dt);
+	Ic::WeaponState ret = m_prev_state;
+	ret.mode = m_p.mode; // May have changed
+
+	m_behaviour.Frame(&m_p, dt, &ret);
+
+	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	m_prev_state = ret;
+
+	return ret;
 }
 
 void Ic::ArWeapon::Trigger(int gesture)
@@ -331,10 +382,9 @@ void Ic::ArWeapon::Reload()
 	return m_behaviour.Reload(&m_p);
 }
 
-Ic::ClosedBoltBehaviour::Mode Ic::ArWeapon::CycleMode()
+Ic::WeaponMode Ic::ArWeapon::CycleMode()
 {
-	m_p.mode = (m_p.mode == ClosedBoltBehaviour::Mode::Automatic) ? ClosedBoltBehaviour::Mode::Semi
-	                                                              : ClosedBoltBehaviour::Mode::Automatic;
+	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
 
 	PRINTF("ArWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
@@ -346,17 +396,26 @@ Ic::ClosedBoltBehaviour::Mode Ic::ArWeapon::CycleMode()
 
 void Ic::RifleWeapon::Initialise()
 {
-	m_p.mode = Ic::ClosedBoltBehaviour::Mode::Manual;
+	m_prev_state = {};
+
+	m_p.mode = Ic::WeaponMode::Manual;
 	m_p.bolt_travel_duration = 60.0 / 4000.0; // Bolt barely moves...
 	m_p.magazine_size = 5;
 	m_p.cock_duration = 1.5; // ...manual cock is what determines rate of fire
 
-	m_behaviour.Initialise(&m_p);
+	m_behaviour.Initialise(&m_p, &m_prev_state);
 }
 
-Ic::ClosedBoltBehaviour::FrameOutput Ic::RifleWeapon::Frame(float dt)
+Ic::WeaponState Ic::RifleWeapon::Frame(float dt)
 {
-	return m_behaviour.Frame(&m_p, dt);
+	Ic::WeaponState ret = m_prev_state;
+
+	m_behaviour.Frame(&m_p, dt, &ret);
+
+	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	m_prev_state = ret;
+
+	return ret;
 }
 
 void Ic::RifleWeapon::Trigger(int gesture)
@@ -369,7 +428,7 @@ void Ic::RifleWeapon::Reload()
 	return m_behaviour.Reload(&m_p);
 }
 
-Ic::ClosedBoltBehaviour::Mode Ic::RifleWeapon::CycleMode()
+Ic::WeaponMode Ic::RifleWeapon::CycleMode()
 {
 	return m_p.mode;
 }

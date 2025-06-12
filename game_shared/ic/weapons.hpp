@@ -13,35 +13,88 @@ defined by the Mozilla Public License, v. 2.0.
 #ifndef IC_WEAPONS_HPP
 #define IC_WEAPONS_HPP
 
+#include "base.hpp"
+#include <stdint.h>
+
 namespace Ic
 {
+
+enum class WeaponMode
+{
+	Manual = 0,
+	Semi = 1,
+	Automatic = 2
+};
+
+static const char* ToString(WeaponMode mode)
+{
+	switch (mode)
+	{
+	case WeaponMode::Manual: return "MANUAL";
+	case WeaponMode::Semi: return "SEMI";
+	case WeaponMode::Automatic: return "AUTO";
+	}
+
+	return "";
+}
+
+
+struct WeaponState
+{
+	bool updated; // In comparision with previous state
+
+	// Properties:
+	WeaponMode mode; // Net-coded
+
+	// Behaviour:
+	int rounds_fired;
+	int chamber;  // Net-coded
+	int magazine; // Net-coded
+
+	//
+
+	static bool Compare(const WeaponState* a, const WeaponState* b)
+	{
+		// Mathematical memcmp():
+		return (((static_cast<int>(a->mode) - static_cast<int>(b->mode)) | //
+		         (a->rounds_fired - b->rounds_fired) |                     //
+		         (a->chamber - b->chamber) |                               //
+		         (a->magazine - b->magazine)) == 0)
+		           ? false
+		           : true;
+	}
+
+	static uint32_t EncodeNetWord(WeaponState s)
+	{
+		return (Ic::Clamp(s.magazine, 0, 127) << 0) | //
+		       (Ic::Clamp(s.chamber, 0, 1) << 7) |    //
+		       (static_cast<int>(s.mode) << 8);
+	}
+
+	static WeaponState DecodeNetWord(uint32_t w)
+	{
+		WeaponState ret = {};
+		ret.magazine = (w >> 0) & 127;
+		ret.chamber = (w >> 7) & 1;
+		ret.mode = static_cast<WeaponMode>((w >> 8) & 3);
+		return ret;
+	}
+};
+
 
 class ClosedBoltBehaviour
 {
   public:
-	enum class Mode
-	{
-		Semi,
-		Automatic,
-		Manual
-	};
-
 	struct Properties
 	{
-		Mode mode;
+		WeaponMode mode;
 		double bolt_travel_duration;
 		double magazine_size;
 		double cock_duration;
 	};
 
-	struct FrameOutput // What happened this frame
-	{
-		int rounds_fired;
-		int magazine;
-	};
-
-	void Initialise(const Properties*);
-	FrameOutput Frame(const Properties*, float dt);
+	void Initialise(const Properties*, WeaponState* out_state);
+	void Frame(const Properties*, float dt, WeaponState* out_state);
 
 	void Trigger(const Properties*, int gesture); // Gesture: 0 = Release, !0 = Press
 	void Reload(const Properties*);
@@ -68,12 +121,14 @@ class PistolWeapon
 	Ic::ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
+	WeaponState m_prev_state;
+
   public:
 	void Initialise();
-	ClosedBoltBehaviour::FrameOutput Frame(float dt);
+	WeaponState Frame(float dt);
 	void Trigger(int gesture);
 	void Reload();
-	ClosedBoltBehaviour::Mode CycleMode();
+	WeaponMode CycleMode();
 };
 
 class ShotgunWeapon
@@ -81,12 +136,14 @@ class ShotgunWeapon
 	Ic::ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
+	WeaponState m_prev_state;
+
   public:
 	void Initialise();
-	ClosedBoltBehaviour::FrameOutput Frame(float dt);
+	WeaponState Frame(float dt);
 	void Trigger(int gesture);
 	void Reload();
-	ClosedBoltBehaviour::Mode CycleMode();
+	WeaponMode CycleMode();
 };
 
 class SmgWeapon
@@ -94,12 +151,14 @@ class SmgWeapon
 	Ic::ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
+	WeaponState m_prev_state;
+
   public:
 	void Initialise();
-	ClosedBoltBehaviour::FrameOutput Frame(float dt);
+	WeaponState Frame(float dt);
 	void Trigger(int gesture);
 	void Reload();
-	ClosedBoltBehaviour::Mode CycleMode();
+	WeaponMode CycleMode();
 };
 
 class ArWeapon
@@ -107,12 +166,14 @@ class ArWeapon
 	Ic::ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
+	WeaponState m_prev_state;
+
   public:
 	void Initialise();
-	ClosedBoltBehaviour::FrameOutput Frame(float dt);
+	WeaponState Frame(float dt);
 	void Trigger(int gesture);
 	void Reload();
-	ClosedBoltBehaviour::Mode CycleMode();
+	WeaponMode CycleMode();
 };
 
 class RifleWeapon final
@@ -120,12 +181,14 @@ class RifleWeapon final
 	Ic::ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
+	WeaponState m_prev_state;
+
   public:
 	void Initialise();
-	ClosedBoltBehaviour::FrameOutput Frame(float dt);
+	WeaponState Frame(float dt);
 	void Trigger(int gesture);
 	void Reload();
-	ClosedBoltBehaviour::Mode CycleMode();
+	WeaponMode CycleMode();
 };
 
 } // namespace Ic

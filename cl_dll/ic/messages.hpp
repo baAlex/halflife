@@ -34,6 +34,9 @@ bool GetIfDead();
 int GetHealth();
 float GetAccuracy(Side);
 float GetSpeed();
+const char* GetWeaponMode();
+int GetChamberAmmo();
+int GetMagazineAmmo();
 
 } // namespace Ic
 

@@ -166,7 +166,7 @@ int gmsgBattery = 0;
 int gmsgTrain = 0;
 int gmsgLogo = 0;
 int gmsgWeaponList = 0;
-int gmsgAmmoX = 0;
+int gmsgWeaponState = 0; // (baAlex)
 int gmsgHudText = 0;
 int gmsgDeathMsg = 0;
 int gmsgScoreInfo = 0;
@@ -232,7 +232,7 @@ void LinkUserMessages( void )
 	gmsgShowMenu = REG_USER_MSG( "ShowMenu", -1 );
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
-	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgWeaponState = REG_USER_MSG("WeaponState", 4); // (baAlex)
 	gmsgTeamNames = REG_USER_MSG( "TeamNames", -1 );
 
 	gmsgStatusText = REG_USER_MSG("StatusText", -1);
@@ -2723,6 +2723,7 @@ void CBasePlayer::PostThink()
 		// (baAlex) Do more weapon stuff
 		const int latched_buttons = (m_afButtonLast ^ pev->button);
 
+		// Interact with weapon
 		if ((latched_buttons & IN_ATTACK) != 0)
 		{
 			m_test_weapon.Trigger(pev->button & IN_ATTACK);
@@ -2739,10 +2740,18 @@ void CBasePlayer::PostThink()
 			m_test_weapon.Reload();
 		}
 
-		const auto f = m_test_weapon.Frame(gpGlobals->frametime);
-		if (f.rounds_fired != 0)
+		// How weapon state ends this frame?
+		const auto state = m_test_weapon.Frame(gpGlobals->frametime);
+
+		if (state.updated == true)
 		{
-			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM);
+			if (state.rounds_fired != 0)
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM);
+
+			// Tell client the news
+			MESSAGE_BEGIN(MSG_ONE, gmsgWeaponState, NULL, pev);
+				WRITE_LONG(Ic::WeaponState::EncodeNetWord(state));
+			MESSAGE_END();
 		}
 	}
 
@@ -4106,6 +4115,7 @@ int CBasePlayer::GetAmmoIndex(const char *psz)
 
 // Called from UpdateClientData
 // makes sure the client has all the necessary ammo info,  if values have changed
+#if 0 // (baAlex)
 void CBasePlayer::SendAmmoUpdate(void)
 {
 	for (int i=0; i < MAX_AMMO_SLOTS;i++)
@@ -4125,6 +4135,7 @@ void CBasePlayer::SendAmmoUpdate(void)
 		}
 	}
 }
+#endif
 
 /*
 =========================================================
@@ -4356,7 +4367,7 @@ void CBasePlayer :: UpdateClientData( void )
 	}
 
 
-	SendAmmoUpdate();
+	// SendAmmoUpdate(); (baAlex)
 
 	// Update all the items
 	for ( int i = 0; i < MAX_ITEM_TYPES; i++ )

@@ -20,9 +20,12 @@
 
 #include "messages.hpp"
 #include "ic/base.hpp"
+#include "ic/weapons.hpp"
 
 
 static int s_health;
+static Ic::WeaponState s_weapon;
+
 static float s_accuracy[2];
 static float s_speed;
 static float s_max_speed;
@@ -53,11 +56,27 @@ static int sDamageReceive(const char* name, int size, void* pbuf)
 	return 1;
 }
 
+static int sWeaponState(const char* name, int size, void* pbuf)
+{
+	BEGIN_READ(pbuf, size);
+	s_weapon = Ic::WeaponState::DecodeNetWord(READ_LONG());
+
+	gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon.mode, s_weapon.chamber, s_weapon.magazine);
+	return 1;
+}
+
 
 void Ic::MessagesInitialise()
 {
 	gEngfuncs.pfnHookUserMsg("Health", sHealthChanges);
 	gEngfuncs.pfnHookUserMsg("Damage", sDamageReceive);
+	gEngfuncs.pfnHookUserMsg("WeaponState", sWeaponState);
+
+	// TODO: there are a lot of messages currently sent by player
+	// that are not received anywhere, they remain in 'ammo.cpp'
+	// which is now disabled. Of course I need replacement for
+	// them, or remove them entirely, but doing that require
+	// knowledge on what they do and when. And yeah...
 
 	MessagesSoftInitialise();
 }
@@ -99,4 +118,19 @@ float Ic::GetAccuracy(Side side)
 float Ic::GetSpeed()
 {
 	return s_speed;
+}
+
+const char* Ic::GetWeaponMode()
+{
+	return Ic::ToString(s_weapon.mode);
+}
+
+int Ic::GetChamberAmmo()
+{
+	return s_weapon.chamber;
+}
+
+int Ic::GetMagazineAmmo()
+{
+	return s_weapon.magazine;
 }

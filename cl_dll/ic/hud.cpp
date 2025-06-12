@@ -14,6 +14,7 @@
  ****/
 
 // ORDER OF INCLUDES IS THIS AND NO OTHER
+#include "cvardef.h"
 #include "wrect.h"
 #include "cl_dll.h"
 #include "APIProxy.h"
@@ -93,15 +94,16 @@ class DevDashboard
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Dt: %f", dt);
 			sDrawText(s_margin, 100 + height * 0, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
-			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Health: %i", Ic::GetHealth());
+			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Health: %i\nWeapon: %s, %i + %i", Ic::GetHealth(),
+			         Ic::GetWeaponMode(), Ic::GetChamberAmmo(), Ic::GetMagazineAmmo());
 			sDrawText(s_margin, 100 + height * 2, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Client accuracy: %.2f\nServer accuracy: %.2f",
 			         Ic::GetAccuracy(Ic::Side::Client), Ic::GetAccuracy(Ic::Side::Server));
-			sDrawText(s_margin, 100 + height * 4, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+			sDrawText(s_margin, 100 + height * 5, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Speed: %03.0f/%03.0f", Ic::GetSpeed(), Ic::PLAYER_MAX_SPEED);
-			sDrawText(s_margin, 100 + height * 7, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+			sDrawText(s_margin, 100 + height * 8, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 		}
 	}
 };
@@ -192,7 +194,9 @@ void Ic::HudSoftInitialise()
 {
 	gEngfuncs.Con_Printf("### Ic::HudSoftInitialise()\n");
 
-	s_developer_level = 0;
+	const auto dev_cvar = gEngfuncs.pfnGetCvarPointer("developer");
+
+	s_developer_level = (dev_cvar != nullptr) ? static_cast<int>(dev_cvar->value) : 0;
 	s_prev_time = 0.0f;
 }
 
