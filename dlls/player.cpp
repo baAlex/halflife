@@ -2719,6 +2719,33 @@ void CBasePlayer::PostThink()
 // do weapon stuff
 	ItemPostFrame( );
 
+	{
+		// (baAlex) Do more weapon stuff
+		const int latched_buttons = (m_afButtonLast ^ pev->button);
+
+		if ((latched_buttons & IN_ATTACK) != 0)
+		{
+			m_test_weapon.Trigger(pev->button & IN_ATTACK);
+		}
+
+		if ((latched_buttons & IN_ATTACK2) != 0 &&
+		    (pev->button & IN_ATTACK2) != 0) // Only send on press
+		{
+			m_test_weapon.CycleMode();
+		}
+		if ((latched_buttons & IN_RELOAD) != 0 &&
+		    (pev->button & IN_RELOAD) != 0) // Ditto
+		{
+			m_test_weapon.Reload();
+		}
+
+		const auto f = m_test_weapon.Frame(gpGlobals->frametime);
+		if (f.rounds_fired != 0)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM);
+		}
+	}
+
 // check to see if player landed hard enough to make a sound
 // falling farther than half of the maximum safe distance, but not as far a max safe distance will
 // play a bootscrape sound, and no damage will be inflicted. Fallling a distance shorter than half
@@ -2790,9 +2817,6 @@ void CBasePlayer::PostThink()
 
 	{
 		// (baAlex)
-		//m_accuracy.Sample({pev->origin.x, pev->origin.y}, {pev->v_angle.x, pev->v_angle.y},
-		//                  ((pev->flags & FL_DUCKING) != 0) ? 1 : 0, ((pev->flags & FL_ONGROUND) != 0) ? 0 : 1,
-		//                  Ic::PLAYER_MAX_SPEED, gpGlobals->frametime);
 		m_accuracy.Sample({pev->origin.x, pev->origin.y}, {pev->v_angle.x, pev->v_angle.y},
 		                  ((pev->button & IN_DUCK) != 0) ? 1 : 0, ((pev->flags & FL_ONGROUND) != 0) ? 0 : 1,
 		                  Ic::PLAYER_MAX_SPEED, gpGlobals->frametime);
@@ -3100,6 +3124,7 @@ void CBasePlayer::Spawn( void )
 	{
 		// (baAlex)
 		m_accuracy.Initialise();
+		m_test_weapon.Initialise();
 	}
 
 	g_pGameRules->PlayerSpawn( this );

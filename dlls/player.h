@@ -21,6 +21,7 @@
 
 #include "ic/accuracy.hpp"
 #include "ic/game_constants.hpp"
+#include "ic/weapons.hpp"
 
 
 #define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
@@ -334,6 +335,7 @@ public:
 
 	// (baAlex)
 	Ic::Accuracy m_accuracy;
+	Ic::SmgWeapon m_test_weapon;
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025
