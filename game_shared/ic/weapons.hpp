@@ -44,6 +44,7 @@ struct WeaponState
 	bool updated; // In comparision with previous state
 
 	// Properties:
+	int id;          // Net-coded
 	WeaponMode mode; // Net-coded
 
 	// Behaviour:
@@ -56,6 +57,7 @@ struct WeaponState
 	static bool Compare(const WeaponState* a, const WeaponState* b)
 	{
 		// Mathematical memcmp():
+		// Not 'id', that shouldn't change
 		return (((static_cast<int>(a->mode) - static_cast<int>(b->mode)) | //
 		         (a->rounds_fired - b->rounds_fired) |                     //
 		         (a->chamber - b->chamber) |                               //
@@ -66,17 +68,19 @@ struct WeaponState
 
 	static uint32_t EncodeNetWord(WeaponState s)
 	{
-		return (Ic::Clamp(s.magazine, 0, 127) << 0) | //
-		       (Ic::Clamp(s.chamber, 0, 1) << 7) |    //
-		       (static_cast<int>(s.mode) << 8);
+		return (Ic::Clamp(s.id, 0, 7) << 0) |         //
+		       (Ic::Clamp(s.magazine, 0, 127) << 4) | //
+		       (Ic::Clamp(s.chamber, 0, 1) << 11) |   //
+		       (static_cast<int>(s.mode) << 12);
 	}
 
 	static WeaponState DecodeNetWord(uint32_t w)
 	{
 		WeaponState ret = {};
-		ret.magazine = (w >> 0) & 127;
-		ret.chamber = (w >> 7) & 1;
-		ret.mode = static_cast<WeaponMode>((w >> 8) & 3);
+		ret.id = (w >> 0) & 7;
+		ret.magazine = (w >> 4) & 127;
+		ret.chamber = (w >> 11) & 1;
+		ret.mode = static_cast<WeaponMode>((w >> 12) & 3);
 		return ret;
 	}
 };
@@ -116,79 +120,91 @@ class ClosedBoltBehaviour
 };
 
 
-class PistolWeapon
+class PistolWeapon;
+class ShotgunWeapon;
+class SmgWeapon;
+class ArWeapon;
+class RifleWeapon;
+
+class GeneralizedWeapon
 {
-	Ic::ClosedBoltBehaviour::Properties m_p;
+	ClosedBoltBehaviour::Properties m_p;
 	ClosedBoltBehaviour m_behaviour;
 
 	WeaponState m_prev_state;
 
+	// Friendship is magic :)
+	friend PistolWeapon;
+	friend ShotgunWeapon;
+	friend SmgWeapon;
+	friend ArWeapon;
+	friend RifleWeapon;
+
   public:
-	void Initialise();
-	WeaponState Frame(float dt);
-	void Trigger(int gesture);
-	void Reload();
-	WeaponMode CycleMode();
+	virtual int Id() const = 0;
+	virtual WeaponState Frame(float dt) = 0;
+	virtual void Trigger(int gesture);
+	virtual void Reload();
+	virtual WeaponMode CycleMode();
 };
 
-class ShotgunWeapon
+
+class PistolWeapon final : public GeneralizedWeapon
 {
-	Ic::ClosedBoltBehaviour::Properties m_p;
-	ClosedBoltBehaviour m_behaviour;
-
-	WeaponState m_prev_state;
-
   public:
+	static constexpr int ID = 1;
+	static constexpr const char* SHORT_NAME = "Pistol";
+
 	void Initialise();
-	WeaponState Frame(float dt);
-	void Trigger(int gesture);
-	void Reload();
-	WeaponMode CycleMode();
+	int Id() const override;
+	WeaponState Frame(float dt) override;
 };
 
-class SmgWeapon
+class ShotgunWeapon final : public GeneralizedWeapon
 {
-	Ic::ClosedBoltBehaviour::Properties m_p;
-	ClosedBoltBehaviour m_behaviour;
-
-	WeaponState m_prev_state;
-
   public:
+	static constexpr int ID = 2;
+	static constexpr const char* SHORT_NAME = "Shotgun";
+
 	void Initialise();
-	WeaponState Frame(float dt);
-	void Trigger(int gesture);
-	void Reload();
-	WeaponMode CycleMode();
+	int Id() const override;
+	WeaponState Frame(float dt) override;
+	WeaponMode CycleMode() override;
 };
 
-class ArWeapon
+class SmgWeapon final : public GeneralizedWeapon
 {
-	Ic::ClosedBoltBehaviour::Properties m_p;
-	ClosedBoltBehaviour m_behaviour;
-
-	WeaponState m_prev_state;
-
   public:
+	static constexpr int ID = 3;
+	static constexpr const char* SHORT_NAME = "SMG";
+
 	void Initialise();
-	WeaponState Frame(float dt);
-	void Trigger(int gesture);
-	void Reload();
-	WeaponMode CycleMode();
+	int Id() const override;
+	WeaponState Frame(float dt) override;
+	WeaponMode CycleMode() override;
 };
 
-class RifleWeapon final
+class ArWeapon final : public GeneralizedWeapon
 {
-	Ic::ClosedBoltBehaviour::Properties m_p;
-	ClosedBoltBehaviour m_behaviour;
-
-	WeaponState m_prev_state;
-
   public:
+	static constexpr int ID = 4;
+	static constexpr const char* SHORT_NAME = "AR";
+
 	void Initialise();
-	WeaponState Frame(float dt);
-	void Trigger(int gesture);
-	void Reload();
-	WeaponMode CycleMode();
+	int Id() const override;
+	WeaponState Frame(float dt) override;
+	WeaponMode CycleMode() override;
+};
+
+class RifleWeapon final : public GeneralizedWeapon
+{
+  public:
+	static constexpr int ID = 5;
+	static constexpr const char* SHORT_NAME = "Rifle";
+
+	void Initialise();
+	int Id() const override;
+	WeaponState Frame(float dt) override;
 };
 
 } // namespace Ic

@@ -37,6 +37,7 @@ float GetSpeed();
 const char* GetWeaponMode();
 int GetChamberAmmo();
 int GetMagazineAmmo();
+const char* GetWeaponName();
 
 } // namespace Ic
 

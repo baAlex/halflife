@@ -25,6 +25,7 @@
 
 static int s_health;
 static Ic::WeaponState s_weapon;
+static const char* s_weapon_name;
 
 static float s_accuracy[2];
 static float s_speed;
@@ -60,6 +61,17 @@ static int sWeaponState(const char* name, int size, void* pbuf)
 {
 	BEGIN_READ(pbuf, size);
 	s_weapon = Ic::WeaponState::DecodeNetWord(READ_LONG());
+
+	if (s_weapon.id == Ic::PistolWeapon::ID)
+		s_weapon_name = Ic::PistolWeapon::SHORT_NAME;
+	else if (s_weapon.id == Ic::ShotgunWeapon::ID)
+		s_weapon_name = Ic::ShotgunWeapon::SHORT_NAME;
+	else if (s_weapon.id == Ic::SmgWeapon::ID)
+		s_weapon_name = Ic::SmgWeapon::SHORT_NAME;
+	else if (s_weapon.id == Ic::ArWeapon::ID)
+		s_weapon_name = Ic::ArWeapon::SHORT_NAME;
+	else if (s_weapon.id == Ic::RifleWeapon::ID)
+		s_weapon_name = Ic::RifleWeapon::SHORT_NAME;
 
 	gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon.mode, s_weapon.chamber, s_weapon.magazine);
 	return 1;
@@ -133,4 +145,9 @@ int Ic::GetChamberAmmo()
 int Ic::GetMagazineAmmo()
 {
 	return s_weapon.magazine;
+}
+
+const char* Ic::GetWeaponName()
+{
+	return s_weapon_name;
 }

@@ -35,8 +35,8 @@ void Ic::ClosedBoltBehaviour::Initialise(const Properties* p, WeaponState* out_s
 {
 	m_time = 0.0;
 
-	m_magazine = p->magazine_size;
-	m_chamber = 0;
+	m_magazine = p->magazine_size - 1;
+	m_chamber = 1;
 
 	m_cock_done = 0.0;
 	m_bolt_ready = 0.0;
@@ -206,19 +206,43 @@ void Ic::ClosedBoltBehaviour::Reload(const Properties* p)
 }
 
 
+// Typical C++ lasagna code
+// ========================
+void Ic::GeneralizedWeapon::Trigger(int gesture)
+{
+	return m_behaviour.Trigger(&m_p, gesture);
+}
+
+void Ic::GeneralizedWeapon::Reload()
+{
+	return m_behaviour.Reload(&m_p);
+}
+
+Ic::WeaponMode Ic::GeneralizedWeapon::CycleMode()
+{
+	return m_p.mode;
+}
+
+
 // Pistol, Glock like
 // ==================
 
 void Ic::PistolWeapon::Initialise()
 {
-	m_prev_state = {};
-
 	m_p.mode = Ic::WeaponMode::Semi;
 	m_p.bolt_travel_duration = 60.0 / 2000.0;
 	m_p.magazine_size = 17;
 	m_p.cock_duration = 0.2;
 
+	m_prev_state = {};
 	m_behaviour.Initialise(&m_p, &m_prev_state);
+	m_prev_state.mode = m_p.mode; // TODO?
+	m_prev_state.id = ID;         // TODO?
+}
+
+int Ic::PistolWeapon::Id() const
+{
+	return ID;
 }
 
 Ic::WeaponState Ic::PistolWeapon::Frame(float dt)
@@ -233,35 +257,26 @@ Ic::WeaponState Ic::PistolWeapon::Frame(float dt)
 	return ret;
 }
 
-void Ic::PistolWeapon::Trigger(int gesture)
-{
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::PistolWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
-Ic::WeaponMode Ic::PistolWeapon::CycleMode()
-{
-	return m_p.mode;
-}
-
 
 // Shotgun, SPAS 12 like
 // =====================
 
 void Ic::ShotgunWeapon::Initialise()
 {
-	m_prev_state = {};
-
 	m_p.mode = Ic::WeaponMode::Semi;
 	m_p.bolt_travel_duration = 60.0 / 350.0;
 	m_p.magazine_size = 7;
 	m_p.cock_duration = .5;
 
+	m_prev_state = {};
 	m_behaviour.Initialise(&m_p, &m_prev_state);
+	m_prev_state.mode = m_p.mode; // TODO?
+	m_prev_state.id = ID;         // TODO?
+}
+
+int Ic::ShotgunWeapon::Id() const
+{
+	return ID;
 }
 
 Ic::WeaponState Ic::ShotgunWeapon::Frame(float dt)
@@ -277,21 +292,9 @@ Ic::WeaponState Ic::ShotgunWeapon::Frame(float dt)
 	return ret;
 }
 
-void Ic::ShotgunWeapon::Trigger(int gesture)
-{
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::ShotgunWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
 Ic::WeaponMode Ic::ShotgunWeapon::CycleMode()
 {
 	m_p.mode = (m_p.mode == WeaponMode::Semi) ? WeaponMode::Manual : WeaponMode::Semi;
-
-	PRINTF("ShotgunWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
 }
 
@@ -302,14 +305,20 @@ Ic::WeaponMode Ic::ShotgunWeapon::CycleMode()
 
 void Ic::SmgWeapon::Initialise()
 {
-	m_prev_state = {};
-
 	m_p.mode = Ic::WeaponMode::Automatic;
 	m_p.bolt_travel_duration = 60.0 / 1100.0; // This is different, in comparison the MP5 is 850 just like an AR
 	m_p.magazine_size = 20;
 	m_p.cock_duration = 0.25;
 
+	m_prev_state = {};
 	m_behaviour.Initialise(&m_p, &m_prev_state);
+	m_prev_state.mode = m_p.mode; // TODO?
+	m_prev_state.id = ID;         // TODO?
+}
+
+int Ic::SmgWeapon::Id() const
+{
+	return ID;
 }
 
 Ic::WeaponState Ic::SmgWeapon::Frame(float dt)
@@ -325,21 +334,9 @@ Ic::WeaponState Ic::SmgWeapon::Frame(float dt)
 	return ret;
 }
 
-void Ic::SmgWeapon::Trigger(int gesture)
-{
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::SmgWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
 Ic::WeaponMode Ic::SmgWeapon::CycleMode()
 {
 	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
-
-	PRINTF("SmgWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
 }
 
@@ -349,14 +346,20 @@ Ic::WeaponMode Ic::SmgWeapon::CycleMode()
 
 void Ic::ArWeapon::Initialise()
 {
-	m_prev_state = {};
-
 	m_p.mode = Ic::WeaponMode::Automatic;
 	m_p.bolt_travel_duration = 60.0 / 850.0;
 	m_p.magazine_size = 30; // NATO be like this
 	m_p.cock_duration = 0.25;
 
+	m_prev_state = {};
 	m_behaviour.Initialise(&m_p, &m_prev_state);
+	m_prev_state.mode = m_p.mode; // TODO?
+	m_prev_state.id = ID;         // TODO?
+}
+
+int Ic::ArWeapon::Id() const
+{
+	return ID;
 }
 
 Ic::WeaponState Ic::ArWeapon::Frame(float dt)
@@ -372,21 +375,9 @@ Ic::WeaponState Ic::ArWeapon::Frame(float dt)
 	return ret;
 }
 
-void Ic::ArWeapon::Trigger(int gesture)
-{
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::ArWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
 Ic::WeaponMode Ic::ArWeapon::CycleMode()
 {
 	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
-
-	PRINTF("ArWeapon::CycleMode, %i\n", static_cast<int>(m_p.mode));
 	return m_p.mode;
 }
 
@@ -396,14 +387,20 @@ Ic::WeaponMode Ic::ArWeapon::CycleMode()
 
 void Ic::RifleWeapon::Initialise()
 {
-	m_prev_state = {};
-
 	m_p.mode = Ic::WeaponMode::Manual;
 	m_p.bolt_travel_duration = 60.0 / 4000.0; // Bolt barely moves...
 	m_p.magazine_size = 5;
 	m_p.cock_duration = 1.5; // ...manual cock is what determines rate of fire
 
+	m_prev_state = {};
 	m_behaviour.Initialise(&m_p, &m_prev_state);
+	m_prev_state.mode = m_p.mode; // TODO?
+	m_prev_state.id = ID;         // TODO?
+}
+
+int Ic::RifleWeapon::Id() const
+{
+	return ID;
 }
 
 Ic::WeaponState Ic::RifleWeapon::Frame(float dt)
@@ -416,19 +413,4 @@ Ic::WeaponState Ic::RifleWeapon::Frame(float dt)
 	m_prev_state = ret;
 
 	return ret;
-}
-
-void Ic::RifleWeapon::Trigger(int gesture)
-{
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::RifleWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
-Ic::WeaponMode Ic::RifleWeapon::CycleMode()
-{
-	return m_p.mode;
 }

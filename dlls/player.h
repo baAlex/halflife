@@ -333,9 +333,16 @@ public:
 	
 	int	m_iAutoWepSwitch;
 
-	// (baAlex)
+	// < (baAlex) >
 	Ic::Accuracy m_accuracy;
-	Ic::SmgWeapon m_test_weapon;
+	Ic::GeneralizedWeapon* m_current_weapon;
+
+	Ic::PistolWeapon m_pistol;   // We have few weapons, so no inventory
+	Ic::ShotgunWeapon m_shotgun; // is truly needed
+	Ic::SmgWeapon m_smg;
+	Ic::ArWeapon m_ar;
+	Ic::RifleWeapon m_rifle;
+	// </ (baAlex) >
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025

@@ -124,6 +124,7 @@ GAME_SHARED_OBJS = \
 	$(GAME_SHARED_OBJ_DIR)/ic/accuracy.o \
 	$(GAME_SHARED_OBJ_DIR)/ic/base.o \
 	$(GAME_SHARED_OBJ_DIR)/ic/vector.o \
+	$(GAME_SHARED_OBJ_DIR)/ic/weapons.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_checkbutton2.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_grid.o \
 	$(GAME_SHARED_OBJ_DIR)/vgui_helpers.o \

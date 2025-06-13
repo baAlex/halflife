@@ -2719,29 +2719,30 @@ void CBasePlayer::PostThink()
 // do weapon stuff
 	ItemPostFrame( );
 
+	// (baAlex) Do more weapon stuff
+	if (m_current_weapon != nullptr)
 	{
-		// (baAlex) Do more weapon stuff
 		const int latched_buttons = (m_afButtonLast ^ pev->button);
 
 		// Interact with weapon
 		if ((latched_buttons & IN_ATTACK) != 0)
 		{
-			m_test_weapon.Trigger(pev->button & IN_ATTACK);
+			m_current_weapon->Trigger(pev->button & IN_ATTACK);
 		}
 
 		if ((latched_buttons & IN_ATTACK2) != 0 &&
 		    (pev->button & IN_ATTACK2) != 0) // Only send on press
 		{
-			m_test_weapon.CycleMode();
+			m_current_weapon->CycleMode();
 		}
 		if ((latched_buttons & IN_RELOAD) != 0 &&
 		    (pev->button & IN_RELOAD) != 0) // Ditto
 		{
-			m_test_weapon.Reload();
+			m_current_weapon->Reload();
 		}
 
 		// How weapon state ends this frame?
-		const auto state = m_test_weapon.Frame(gpGlobals->frametime);
+		const auto state = m_current_weapon->Frame(gpGlobals->frametime);
 
 		if (state.updated == true)
 		{
@@ -2749,6 +2750,7 @@ void CBasePlayer::PostThink()
 				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM);
 
 			// Tell client the news
+			// (reliable message, so better make a good use of it)
 			MESSAGE_BEGIN(MSG_ONE, gmsgWeaponState, NULL, pev);
 				WRITE_LONG(Ic::WeaponState::EncodeNetWord(state));
 			MESSAGE_END();
@@ -3133,7 +3135,13 @@ void CBasePlayer::Spawn( void )
 	{
 		// (baAlex)
 		m_accuracy.Initialise();
-		m_test_weapon.Initialise();
+		m_current_weapon = &m_pistol;
+
+		m_pistol.Initialise();
+		m_shotgun.Initialise();
+		m_smg.Initialise();
+		m_ar.Initialise();
+		m_rifle.Initialise();
 	}
 
 	g_pGameRules->PlayerSpawn( this );
@@ -3320,6 +3328,28 @@ void CBasePlayer::SelectItem(const char *pstr)
 {
 	if (!pstr)
 		return;
+
+	// (baAlex)
+	{
+		Ic::GeneralizedWeapon* new_weapon = nullptr;
+
+		if (strcmp(pstr, "weapon_ic1") == 0)
+			new_weapon = &m_pistol;
+		else if (strcmp(pstr, "weapon_ic2") == 0)
+			new_weapon = &m_shotgun;
+		else if (strcmp(pstr, "weapon_ic3") == 0)
+			new_weapon = &m_smg;
+		else if (strcmp(pstr, "weapon_ic4") == 0)
+			new_weapon = &m_ar;
+		else if (strcmp(pstr, "weapon_ic5") == 0)
+			new_weapon = &m_rifle;
+
+		if (new_weapon != nullptr && new_weapon != m_current_weapon)
+		{
+			m_current_weapon = new_weapon;
+			return;
+		}
+	}
 
 	CBasePlayerItem *pItem = NULL;
 

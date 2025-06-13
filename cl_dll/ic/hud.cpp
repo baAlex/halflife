@@ -94,16 +94,19 @@ class DevDashboard
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Dt: %f", dt);
 			sDrawText(s_margin, 100 + height * 0, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
-			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Health: %i\nWeapon: %s, %i + %i", Ic::GetHealth(),
-			         Ic::GetWeaponMode(), Ic::GetChamberAmmo(), Ic::GetMagazineAmmo());
+			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Health: %i", Ic::GetHealth());
 			sDrawText(s_margin, 100 + height * 2, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+
+			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Weapon:\n- (S) %s, %s, %i + %i", Ic::GetWeaponName(),
+			         Ic::GetWeaponMode(), Ic::GetChamberAmmo(), Ic::GetMagazineAmmo());
+			sDrawText(s_margin, 100 + height * 4, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Client accuracy: %.2f\nServer accuracy: %.2f",
 			         Ic::GetAccuracy(Ic::Side::Client), Ic::GetAccuracy(Ic::Side::Server));
-			sDrawText(s_margin, 100 + height * 5, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+			sDrawText(s_margin, 100 + height * 7, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
 			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Speed: %03.0f/%03.0f", Ic::GetSpeed(), Ic::PLAYER_MAX_SPEED);
-			sDrawText(s_margin, 100 + height * 8, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+			sDrawText(s_margin, 100 + height * 10, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 		}
 	}
 };
