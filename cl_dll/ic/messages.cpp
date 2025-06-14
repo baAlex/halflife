@@ -24,8 +24,10 @@
 
 
 static int s_health;
-static Ic::WeaponState s_weapon;
-static const char* s_weapon_name;
+
+static Ic::WeaponState s_weapon_state;
+static const Ic::WeaponProperties* s_weapon_props;
+static const Ic::ClosedBoltBehaviour::Properties* s_weapon_behaviour_props;
 
 static float s_accuracy[2];
 static float s_speed;
@@ -57,23 +59,16 @@ static int sDamageReceive(const char* name, int size, void* pbuf)
 	return 1;
 }
 
+
 static int sWeaponState(const char* name, int size, void* pbuf)
 {
 	BEGIN_READ(pbuf, size);
-	s_weapon = Ic::WeaponState::DecodeNetWord(READ_LONG());
+	s_weapon_state = Ic::WeaponState::DecodeNetWord(READ_LONG());
 
-	if (s_weapon.id == Ic::PistolWeapon::ID)
-		s_weapon_name = Ic::PistolWeapon::SHORT_NAME;
-	else if (s_weapon.id == Ic::ShotgunWeapon::ID)
-		s_weapon_name = Ic::ShotgunWeapon::SHORT_NAME;
-	else if (s_weapon.id == Ic::SmgWeapon::ID)
-		s_weapon_name = Ic::SmgWeapon::SHORT_NAME;
-	else if (s_weapon.id == Ic::ArWeapon::ID)
-		s_weapon_name = Ic::ArWeapon::SHORT_NAME;
-	else if (s_weapon.id == Ic::RifleWeapon::ID)
-		s_weapon_name = Ic::RifleWeapon::SHORT_NAME;
+	Ic::RetrieveWeaponProps(s_weapon_state.id, &s_weapon_props, &s_weapon_behaviour_props);
 
-	gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon.mode, s_weapon.chamber, s_weapon.magazine);
+	gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon_state.mode, s_weapon_state.chamber,
+	                     s_weapon_state.magazine);
 	return 1;
 }
 
@@ -134,20 +129,23 @@ float Ic::GetSpeed()
 
 const char* Ic::GetWeaponMode()
 {
-	return Ic::ToString(s_weapon.mode);
+	return Ic::ToString(s_weapon_state.mode);
 }
 
 int Ic::GetChamberAmmo()
 {
-	return s_weapon.chamber;
+	return s_weapon_state.chamber;
 }
 
 int Ic::GetMagazineAmmo()
 {
-	return s_weapon.magazine;
+	return s_weapon_state.magazine;
 }
 
 const char* Ic::GetWeaponName()
 {
-	return s_weapon_name;
+	if (s_weapon_props == nullptr)
+		return "Unknown";
+
+	return s_weapon_props->short_name;
 }

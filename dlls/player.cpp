@@ -2733,7 +2733,7 @@ void CBasePlayer::PostThink()
 		if ((latched_buttons & IN_ATTACK2) != 0 &&
 		    (pev->button & IN_ATTACK2) != 0) // Only send on press
 		{
-			m_current_weapon->CycleMode();
+			m_current_weapon->SwitchMode();
 		}
 		if ((latched_buttons & IN_RELOAD) != 0 &&
 		    (pev->button & IN_RELOAD) != 0) // Ditto
@@ -2747,7 +2747,12 @@ void CBasePlayer::PostThink()
 		if (state.updated == true)
 		{
 			if (state.rounds_fired != 0)
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM);
+			{
+				// TODO, I need to use PLAYBACK_EVENT_FULL for this, so it
+				// respects proper server-client separation
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON,
+				           m_current_weapon->GetWeaponProperties()->sound_fire, 1, ATTN_NORM);
+			}
 
 			// Tell client the news
 			// (reliable message, so better make a good use of it)

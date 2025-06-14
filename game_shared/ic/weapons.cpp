@@ -31,6 +31,56 @@ constexpr float EPSILON = 0.001f;
 static double s_time_empty = 0.0;
 
 
+// ================
+
+
+const char* Ic::ToString(WeaponMode mode)
+{
+	switch (mode)
+	{
+	case WeaponMode::Manual: return "MANUAL";
+	case WeaponMode::Semi: return "SEMI";
+	case WeaponMode::Automatic: return "AUTO";
+	}
+
+	return "";
+}
+
+
+bool Ic::WeaponState::Compare(const WeaponState* a, const WeaponState* b)
+{
+	// Mathematical memcmp():
+	// Not 'id', that shouldn't change
+	return (((static_cast<int>(a->mode) - static_cast<int>(b->mode)) | //
+	         (a->rounds_fired - b->rounds_fired) |                     //
+	         (a->chamber - b->chamber) |                               //
+	         (a->magazine - b->magazine)) == 0)
+	           ? false
+	           : true;
+}
+
+uint32_t Ic::WeaponState::EncodeNetWord(WeaponState s)
+{
+	return (Ic::Clamp(s.id, 0, 7) << 0) |         //
+	       (Ic::Clamp(s.magazine, 0, 127) << 4) | //
+	       (Ic::Clamp(s.chamber, 0, 1) << 11) |   //
+	       (static_cast<int>(s.mode) << 12);
+}
+
+Ic::WeaponState Ic::WeaponState::DecodeNetWord(uint32_t w)
+{
+	WeaponState ret = {};
+	ret.id = (w >> 0) & 7;
+	ret.magazine = (w >> 4) & 127;
+	ret.chamber = (w >> 11) & 1;
+	ret.mode = static_cast<WeaponMode>((w >> 12) & 3);
+	return ret;
+}
+
+
+// ================
+
+
 void Ic::ClosedBoltBehaviour::Initialise(const Properties* p, WeaponState* out_state)
 {
 	m_time = 0.0;
@@ -52,7 +102,7 @@ void Ic::ClosedBoltBehaviour::Initialise(const Properties* p, WeaponState* out_s
 }
 
 
-void Ic::ClosedBoltBehaviour::Frame(const Properties* p, float dt, WeaponState* out_state)
+void Ic::ClosedBoltBehaviour::Frame(const Properties* p, WeaponMode mode, float dt, WeaponState* out_state)
 {
 	m_time += static_cast<Timer>(dt);
 
@@ -106,7 +156,7 @@ void Ic::ClosedBoltBehaviour::Frame(const Properties* p, float dt, WeaponState* 
 
 		// Leave it automatically chambered for next fire
 		// (that is what a moving bolt do in automatic and semi weapons)
-		if ((p->mode == WeaponMode::Automatic || p->mode == WeaponMode::Semi) && m_magazine > 0)
+		if ((mode == WeaponMode::Automatic || mode == WeaponMode::Semi) && m_magazine > 0)
 		{
 			m_magazine -= 1;
 			m_chamber = 1;
@@ -114,11 +164,11 @@ void Ic::ClosedBoltBehaviour::Frame(const Properties* p, float dt, WeaponState* 
 
 		// Release trigger if semi
 		// (in those weapons the trigger generally disengage or block some movable piece)
-		if (p->mode == WeaponMode::Semi)
+		if (mode == WeaponMode::Semi)
 			m_pressed = 0;
 
 		// Release trigger and require cock, if manual
-		else if (p->mode == WeaponMode::Manual)
+		else if (mode == WeaponMode::Manual)
 		{
 			// Notice how 'm_chamber' remains empty
 			m_pressed = 0;
@@ -206,211 +256,150 @@ void Ic::ClosedBoltBehaviour::Reload(const Properties* p)
 }
 
 
-// Typical C++ lasagna code
-// ========================
-void Ic::GeneralizedWeapon::Trigger(int gesture)
+// ================
+
+
+void Ic::GeneralizedWeapon::CommonInitialisation(int id, const ClosedBoltBehaviour::Properties* props, WeaponMode mode)
 {
-	return m_behaviour.Trigger(&m_p, gesture);
-}
-
-void Ic::GeneralizedWeapon::Reload()
-{
-	return m_behaviour.Reload(&m_p);
-}
-
-Ic::WeaponMode Ic::GeneralizedWeapon::CycleMode()
-{
-	return m_p.mode;
-}
-
-
-// Pistol, Glock like
-// ==================
-
-void Ic::PistolWeapon::Initialise()
-{
-	m_p.mode = Ic::WeaponMode::Semi;
-	m_p.bolt_travel_duration = 60.0 / 2000.0;
-	m_p.magazine_size = 17;
-	m_p.cock_duration = 0.2;
-
+	m_mode = mode;
 	m_prev_state = {};
-	m_behaviour.Initialise(&m_p, &m_prev_state);
-	m_prev_state.mode = m_p.mode; // TODO?
-	m_prev_state.id = ID;         // TODO?
+
+	m_behaviour.Initialise(props, &m_prev_state);
+
+	// Keep this ones
+	m_prev_state.id = id;
+	m_prev_state.mode = m_mode;
 }
 
-int Ic::PistolWeapon::Id() const
-{
-	return ID;
-}
-
-Ic::WeaponState Ic::PistolWeapon::Frame(float dt)
+Ic::WeaponState Ic::GeneralizedWeapon::CommonFrameWithoutModeSwitch(const ClosedBoltBehaviour::Properties* props,
+                                                                    float dt)
 {
 	Ic::WeaponState ret = m_prev_state;
 
-	m_behaviour.Frame(&m_p, dt, &ret);
+	m_behaviour.Frame(props, m_mode, dt, &ret);
 
-	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	ret.updated = WeaponState::Compare(&ret, &m_prev_state);
 	m_prev_state = ret;
-
 	return ret;
 }
 
-
-// Shotgun, SPAS 12 like
-// =====================
-
-void Ic::ShotgunWeapon::Initialise()
+Ic::WeaponState Ic::GeneralizedWeapon::CommonFrameWithModeSwitch(const ClosedBoltBehaviour::Properties* props, float dt)
 {
-	m_p.mode = Ic::WeaponMode::Semi;
-	m_p.bolt_travel_duration = 60.0 / 350.0;
-	m_p.magazine_size = 7;
-	m_p.cock_duration = .5;
+	WeaponState ret = m_prev_state;
+	ret.mode = m_mode; // May have changed
 
-	m_prev_state = {};
-	m_behaviour.Initialise(&m_p, &m_prev_state);
-	m_prev_state.mode = m_p.mode; // TODO?
-	m_prev_state.id = ID;         // TODO?
-}
+	m_behaviour.Frame(props, m_mode, dt, &ret);
 
-int Ic::ShotgunWeapon::Id() const
-{
-	return ID;
-}
-
-Ic::WeaponState Ic::ShotgunWeapon::Frame(float dt)
-{
-	Ic::WeaponState ret = m_prev_state;
-	ret.mode = m_p.mode; // May have changed
-
-	m_behaviour.Frame(&m_p, dt, &ret);
-
-	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
+	ret.updated = WeaponState::Compare(&ret, &m_prev_state);
 	m_prev_state = ret;
-
 	return ret;
 }
 
-Ic::WeaponMode Ic::ShotgunWeapon::CycleMode()
+Ic::WeaponMode Ic::GeneralizedWeapon::CommonSwitchMode(WeaponMode a, WeaponMode b)
 {
-	m_p.mode = (m_p.mode == WeaponMode::Semi) ? WeaponMode::Manual : WeaponMode::Semi;
-	return m_p.mode;
+	m_mode = (m_mode == a) ? b : a;
+	return m_mode;
 }
 
 
-// Submachine gun, FAMAE SAF like
-// obscure because I need to make it feel different to an AR
-// =========================================================
+// ================
 
-void Ic::SmgWeapon::Initialise()
+
+// clang-format off
+void Ic::PistolWeapon::Initialise() { CommonInitialisation(PROPS.id, &BEHAVIOUR_PROPS, PROPS.mode[0]); }
+int Ic::PistolWeapon::Id() const                                                            { return PROPS.id; }
+const Ic::WeaponProperties* Ic::PistolWeapon::GetWeaponProperties() const                   { return &PROPS; };
+const Ic::ClosedBoltBehaviour::Properties* Ic::PistolWeapon::GetBehaviourProperties() const { return &BEHAVIOUR_PROPS; };
+Ic::WeaponState Ic::PistolWeapon::Frame(float dt) { return CommonFrameWithoutModeSwitch(&BEHAVIOUR_PROPS, dt); }
+void Ic::PistolWeapon::Trigger(int gesture)       { return m_behaviour.Trigger(&BEHAVIOUR_PROPS, gesture); }
+void Ic::PistolWeapon::Reload()                   { return m_behaviour.Reload(&BEHAVIOUR_PROPS); }
+Ic::WeaponMode Ic::PistolWeapon::SwitchMode()     { return m_mode; }
+
+
+void Ic::ShotgunWeapon::Initialise() { CommonInitialisation(PROPS.id, &BEHAVIOUR_PROPS, PROPS.mode[0]); }
+ int Ic::ShotgunWeapon::Id() const                                                            { return PROPS.id; }
+const Ic::WeaponProperties* Ic::ShotgunWeapon::GetWeaponProperties() const                   { return &PROPS; };
+const Ic::ClosedBoltBehaviour::Properties* Ic::ShotgunWeapon::GetBehaviourProperties() const { return &BEHAVIOUR_PROPS; };
+Ic::WeaponState Ic::ShotgunWeapon::Frame(float dt) { return CommonFrameWithModeSwitch(&BEHAVIOUR_PROPS, dt); }
+void Ic::ShotgunWeapon::Trigger(int gesture)       { return m_behaviour.Trigger(&BEHAVIOUR_PROPS, gesture); }
+void Ic::ShotgunWeapon::Reload()                   { return m_behaviour.Reload(&BEHAVIOUR_PROPS); }
+Ic::WeaponMode Ic::ShotgunWeapon::SwitchMode()     { CommonSwitchMode(PROPS.mode[0], PROPS.mode[1]); }
+
+
+void Ic::SmgWeapon::Initialise() { CommonInitialisation(PROPS.id, &BEHAVIOUR_PROPS, PROPS.mode[0]); }
+int Ic::SmgWeapon::Id() const                                                            { return PROPS.id; }
+const Ic::WeaponProperties* Ic::SmgWeapon::GetWeaponProperties() const                   { return &PROPS; };
+const Ic::ClosedBoltBehaviour::Properties* Ic::SmgWeapon::GetBehaviourProperties() const { return &BEHAVIOUR_PROPS; };
+Ic::WeaponState Ic::SmgWeapon::Frame(float dt) { return CommonFrameWithModeSwitch(&BEHAVIOUR_PROPS, dt); }
+void Ic::SmgWeapon::Trigger(int gesture)       { return m_behaviour.Trigger(&BEHAVIOUR_PROPS, gesture); }
+void Ic::SmgWeapon::Reload()                   { return m_behaviour.Reload(&BEHAVIOUR_PROPS); }
+Ic::WeaponMode Ic::SmgWeapon::SwitchMode()     { CommonSwitchMode(PROPS.mode[0], PROPS.mode[1]); }
+
+
+void Ic::ArWeapon::Initialise() { CommonInitialisation(PROPS.id, &BEHAVIOUR_PROPS, PROPS.mode[0]); }
+int Ic::ArWeapon::Id() const                                                            { return PROPS.id; }
+const Ic::WeaponProperties* Ic::ArWeapon::GetWeaponProperties() const                   { return &PROPS; };
+const Ic::ClosedBoltBehaviour::Properties* Ic::ArWeapon::GetBehaviourProperties() const { return &BEHAVIOUR_PROPS; };
+Ic::WeaponState Ic::ArWeapon::Frame(float dt) { return CommonFrameWithModeSwitch(&BEHAVIOUR_PROPS, dt); }
+void Ic::ArWeapon::Trigger(int gesture)       { return m_behaviour.Trigger(&BEHAVIOUR_PROPS, gesture); }
+void Ic::ArWeapon::Reload()                   { return m_behaviour.Reload(&BEHAVIOUR_PROPS); }
+Ic::WeaponMode Ic::ArWeapon::SwitchMode()     { CommonSwitchMode(PROPS.mode[0], PROPS.mode[1]); }
+
+
+void Ic::RifleWeapon::Initialise() { CommonInitialisation(PROPS.id, &BEHAVIOUR_PROPS, PROPS.mode[0]); }
+int Ic::RifleWeapon::Id() const                                                            { return PROPS.id; }
+const Ic::WeaponProperties* Ic::RifleWeapon::GetWeaponProperties() const                   { return &PROPS; };
+const Ic::ClosedBoltBehaviour::Properties* Ic::RifleWeapon::GetBehaviourProperties() const { return &BEHAVIOUR_PROPS; };
+Ic::WeaponState Ic::RifleWeapon::Frame(float dt) { return CommonFrameWithoutModeSwitch(&BEHAVIOUR_PROPS, dt); }
+void Ic::RifleWeapon::Trigger(int gesture)       { return m_behaviour.Trigger(&BEHAVIOUR_PROPS, gesture); }
+void Ic::RifleWeapon::Reload()                   { return m_behaviour.Reload(&BEHAVIOUR_PROPS); }
+Ic::WeaponMode Ic::RifleWeapon::SwitchMode()     { return m_mode; }
+// clang-format on
+
+
+// ================
+
+
+extern constexpr Ic::WeaponProperties Ic::PistolWeapon::PROPS;  // C++11 quirk, is fixed in C++17
+extern constexpr Ic::WeaponProperties Ic::ShotgunWeapon::PROPS; // https://stackoverflow.com/a/53350948
+extern constexpr Ic::WeaponProperties Ic::SmgWeapon::PROPS;
+extern constexpr Ic::WeaponProperties Ic::ArWeapon::PROPS;
+extern constexpr Ic::WeaponProperties Ic::RifleWeapon::PROPS;
+
+extern constexpr Ic::ClosedBoltBehaviour::Properties Ic::PistolWeapon::BEHAVIOUR_PROPS;
+extern constexpr Ic::ClosedBoltBehaviour::Properties Ic::ShotgunWeapon::BEHAVIOUR_PROPS;
+extern constexpr Ic::ClosedBoltBehaviour::Properties Ic::SmgWeapon::BEHAVIOUR_PROPS;
+extern constexpr Ic::ClosedBoltBehaviour::Properties Ic::ArWeapon::BEHAVIOUR_PROPS;
+extern constexpr Ic::ClosedBoltBehaviour::Properties Ic::RifleWeapon::BEHAVIOUR_PROPS;
+
+void Ic::RetrieveWeaponProps(int id, const WeaponProperties** props,
+                             const ClosedBoltBehaviour::Properties** behaviour_props)
 {
-	m_p.mode = Ic::WeaponMode::Automatic;
-	m_p.bolt_travel_duration = 60.0 / 1100.0; // This is different, in comparison the MP5 is 850 just like an AR
-	m_p.magazine_size = 20;
-	m_p.cock_duration = 0.25;
+	// I basically re-invented a dynamic type thingie
+	switch (id)
+	{
+	case Ic::PistolWeapon::PROPS.id:
+		*props = &Ic::PistolWeapon::PROPS;
+		*behaviour_props = &Ic::PistolWeapon::BEHAVIOUR_PROPS;
+		return;
+	case Ic::ShotgunWeapon::PROPS.id:
+		*props = &Ic::ShotgunWeapon::PROPS;
+		*behaviour_props = &Ic::ShotgunWeapon::BEHAVIOUR_PROPS;
+		return;
+	case Ic::SmgWeapon::PROPS.id:
+		*props = &Ic::SmgWeapon::PROPS;
+		*behaviour_props = &Ic::SmgWeapon::BEHAVIOUR_PROPS;
+		return;
+	case Ic::ArWeapon::PROPS.id:
+		*props = &Ic::ArWeapon::PROPS;
+		*behaviour_props = &Ic::ArWeapon::BEHAVIOUR_PROPS;
+		return;
+	case Ic::RifleWeapon::PROPS.id:
+		*props = &Ic::RifleWeapon::PROPS;
+		*behaviour_props = &Ic::RifleWeapon::BEHAVIOUR_PROPS;
+		return;
+	}
 
-	m_prev_state = {};
-	m_behaviour.Initialise(&m_p, &m_prev_state);
-	m_prev_state.mode = m_p.mode; // TODO?
-	m_prev_state.id = ID;         // TODO?
-}
-
-int Ic::SmgWeapon::Id() const
-{
-	return ID;
-}
-
-Ic::WeaponState Ic::SmgWeapon::Frame(float dt)
-{
-	Ic::WeaponState ret = m_prev_state;
-	ret.mode = m_p.mode; // May have changed
-
-	m_behaviour.Frame(&m_p, dt, &ret);
-
-	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
-	m_prev_state = ret;
-
-	return ret;
-}
-
-Ic::WeaponMode Ic::SmgWeapon::CycleMode()
-{
-	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
-	return m_p.mode;
-}
-
-
-// Assault rifle, HK416 like
-// =========================
-
-void Ic::ArWeapon::Initialise()
-{
-	m_p.mode = Ic::WeaponMode::Automatic;
-	m_p.bolt_travel_duration = 60.0 / 850.0;
-	m_p.magazine_size = 30; // NATO be like this
-	m_p.cock_duration = 0.25;
-
-	m_prev_state = {};
-	m_behaviour.Initialise(&m_p, &m_prev_state);
-	m_prev_state.mode = m_p.mode; // TODO?
-	m_prev_state.id = ID;         // TODO?
-}
-
-int Ic::ArWeapon::Id() const
-{
-	return ID;
-}
-
-Ic::WeaponState Ic::ArWeapon::Frame(float dt)
-{
-	Ic::WeaponState ret = m_prev_state;
-	ret.mode = m_p.mode; // May have changed
-
-	m_behaviour.Frame(&m_p, dt, &ret);
-
-	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
-	m_prev_state = ret;
-
-	return ret;
-}
-
-Ic::WeaponMode Ic::ArWeapon::CycleMode()
-{
-	m_p.mode = (m_p.mode == WeaponMode::Automatic) ? WeaponMode::Semi : WeaponMode::Automatic;
-	return m_p.mode;
-}
-
-
-// Rifle, Karabiner 98k like
-// =========================
-
-void Ic::RifleWeapon::Initialise()
-{
-	m_p.mode = Ic::WeaponMode::Manual;
-	m_p.bolt_travel_duration = 60.0 / 4000.0; // Bolt barely moves...
-	m_p.magazine_size = 5;
-	m_p.cock_duration = 1.5; // ...manual cock is what determines rate of fire
-
-	m_prev_state = {};
-	m_behaviour.Initialise(&m_p, &m_prev_state);
-	m_prev_state.mode = m_p.mode; // TODO?
-	m_prev_state.id = ID;         // TODO?
-}
-
-int Ic::RifleWeapon::Id() const
-{
-	return ID;
-}
-
-Ic::WeaponState Ic::RifleWeapon::Frame(float dt)
-{
-	Ic::WeaponState ret = m_prev_state;
-
-	m_behaviour.Frame(&m_p, dt, &ret);
-
-	ret.updated = Ic::WeaponState::Compare(&ret, &m_prev_state);
-	m_prev_state = ret;
-
-	return ret;
+	*props = nullptr;
+	*behaviour_props = nullptr;
 }
