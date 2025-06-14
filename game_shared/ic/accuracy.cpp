@@ -30,6 +30,9 @@ void Ic::Accuracy::Initialise()
 
 	m_air = 0.0f;
 	m_crouch = 0.0f;
+	m_fire = 0.0f;
+
+	m_fire_decay = 0.0f;
 }
 
 
@@ -97,10 +100,24 @@ float Ic::Accuracy::Sample(Ic::Vector2 origin, Ic::Vector2 angles, int crouch, i
 	{
 		m_air = Ic::AnglesHolmerMix(air_float, m_air, AIR_SMOOTH, dt);
 		m_crouch = Ic::AnglesHolmerMix(crouch_float, m_crouch, CROUCH_SMOOTH, dt);
+		m_fire = Ic::AnglesHolmerMix(0.0f, m_fire, m_fire_decay, dt);
 	}
 
 
 	return Get();
+}
+
+
+float Ic::Accuracy::Fire(float force, float decay)
+{
+	m_fire += force;      // Accumulate
+	m_fire_decay = decay; // Keep last one only
+
+	// A bit better approach should be to average last decays,
+	// zeroing them time to time:
+	//		'm_fire_decay = (m_fire_decay + decay) / 2.0f;'
+	// It will make decay less responsive to current, expected,
+	// weapon properties, tho
 }
 
 
@@ -112,5 +129,5 @@ float Ic::Accuracy::Get() const
 		// return x * x; // Bad idea, makes it feel more "smooth" or "delayed"
 	};
 
-	return easing((m_crouch + m_air + m_look_speed + m_walk_speed) * NORMALISE);
+	return easing((m_crouch + m_air + m_look_speed + m_walk_speed) * NORMALISE + m_fire);
 }

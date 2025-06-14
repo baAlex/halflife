@@ -23,6 +23,7 @@ class Accuracy
   public:
 	void Initialise();
 	float Sample(Ic::Vector2 xy_origin, Ic::Vector2 xz_angles, int crouch, int on_air, float max_speed, float dt);
+	float Fire(float force, float decay);
 	float Get() const;
 
   private:
@@ -37,6 +38,9 @@ class Accuracy
 
 	float m_air;
 	float m_crouch;
+	float m_fire;
+
+	float m_fire_decay;
 };
 
 } // namespace Ic

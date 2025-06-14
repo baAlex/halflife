@@ -37,7 +37,22 @@ struct WeaponProperties
 	int modes_no; // No more than 2, there is no code for that
 	WeaponMode mode[2];
 
+	float accuracy_force; // [1]
+	float accuracy_decay; // [2]
+
 	const char* sound_fire;
+
+	// [1] Right now I'm using this to communicate: "Look how good this
+	// weapon is", those with lower force being "better"
+	// [2] Decay communicating an optimal rate/cadence of fire to adopt
+
+	// Should be great to derive those two from empirical data, like
+	// weapon mass, length, calibre, rate of fire, etc... but right now
+	// I'm not sure what I want to communicate, decay feels right but
+	// not force. Also, I don´t want to waste time on this right now,
+	// to later discover tiny caveats like accuracy being exponential
+	// or that, extrapolate weapons spreads from this would require some
+	// different approach. All a work for the future (TODO)
 };
 
 
@@ -142,6 +157,8 @@ class PistolWeapon final : public GeneralizedWeapon
 	    "Pistol",              // Short name
 	    1,                     // Modes number
 	    {WeaponMode::Semi},    // Modes
+	    1.0f / 5.0f,           // Accuracy force
+	    5.0f,                  // Accuracy decay
 	    "weapons/pl_gun3.wav", // Fire sound
 	};
 
@@ -175,6 +192,8 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    "Shotgun",                              // Short name
 	    2,                                      // Modes number
 	    {WeaponMode::Semi, WeaponMode::Manual}, // Modes
+	    2.0f / 5.0f,                            // Accuracy force
+	    4.0f,                                   // Accuracy decay
 	    "weapons/sbarrel1.wav",                 // Fire sound
 	};
 
@@ -209,6 +228,8 @@ class SmgWeapon final : public GeneralizedWeapon
 	    "SMG",                                     // Short name
 	    2,                                         // Modes number
 	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
+	    0.75f / 5.0f,                              // Accuracy force
+	    6.0f,                                      // Accuracy decay
 	    "weapons/pl_gun1.wav",                     // Fire sound
 	};
 
@@ -242,6 +263,8 @@ class ArWeapon final : public GeneralizedWeapon
 	    "AR",                                      // Short name
 	    2,                                         // Modes number
 	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
+	    0.75f / 5.0f,                              // Accuracy force
+	    7.0f,                                      // Accuracy decay
 	    "weapons/hks1.wav",                        // Fire sound
 	};
 
@@ -275,6 +298,8 @@ class RifleWeapon final : public GeneralizedWeapon
 	    "Rifle",                 // Short name
 	    1,                       // Modes number
 	    {WeaponMode::Manual},    // Modes
+	    0.5f / 5.0f,             // Accuracy force
+	    3.0f,                    // Accuracy decay
 	    "weapons/357_shot1.wav", // Fire sound
 	};
 

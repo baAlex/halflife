@@ -511,6 +511,11 @@ void ClientCommand( edict_t *pEntity )
 	{
 		Host_Say( pEntity, 0 );
 	}
+	else if ( FStrEq(pcmd, "fire_mode" ) ) // (baAlex)
+	{
+		// Yes, 'SelectItem()' indeed, thing is that I don't want to add new methods
+		GetClassPtr((CBasePlayer *)pev)->SelectItem("fire_mode");
+	}
 	else if ( FStrEq(pcmd, "say_team" ) )
 	{
 		Host_Say( pEntity, 1 );

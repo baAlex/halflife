@@ -2730,11 +2730,10 @@ void CBasePlayer::PostThink()
 			m_current_weapon->Trigger(pev->button & IN_ATTACK);
 		}
 
-		if ((latched_buttons & IN_ATTACK2) != 0 &&
-		    (pev->button & IN_ATTACK2) != 0) // Only send on press
+		if ((latched_buttons & IN_ATTACK2) != 0)
 		{
-			m_current_weapon->SwitchMode();
 		}
+
 		if ((latched_buttons & IN_RELOAD) != 0 &&
 		    (pev->button & IN_RELOAD) != 0) // Ditto
 		{
@@ -2748,10 +2747,17 @@ void CBasePlayer::PostThink()
 		{
 			if (state.rounds_fired != 0)
 			{
+				const auto p = m_current_weapon->GetWeaponProperties();
+
+				// Accuracy
+				m_accuracy.Fire(p->accuracy_force * static_cast<float>(state.rounds_fired),
+				                p->accuracy_decay);
+
+				// Effects
 				// TODO, I need to use PLAYBACK_EVENT_FULL for this, so it
 				// respects proper server-client separation
 				EMIT_SOUND(ENT(pev), CHAN_WEAPON,
-				           m_current_weapon->GetWeaponProperties()->sound_fire, 1, ATTN_NORM);
+				           p->sound_fire, 1, ATTN_NORM);
 			}
 
 			// Tell client the news
@@ -3338,7 +3344,14 @@ void CBasePlayer::SelectItem(const char *pstr)
 	{
 		Ic::GeneralizedWeapon* new_weapon = nullptr;
 
-		if (strcmp(pstr, "weapon_ic1") == 0)
+		if (strcmp(pstr, "fire_mode") == 0)
+		{
+			if (m_current_weapon != nullptr)
+				m_current_weapon->SwitchMode();
+			return;
+		}
+
+		else if (strcmp(pstr, "weapon_ic1") == 0)
 			new_weapon = &m_pistol;
 		else if (strcmp(pstr, "weapon_ic2") == 0)
 			new_weapon = &m_shotgun;
