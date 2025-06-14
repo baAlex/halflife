@@ -335,7 +335,9 @@ public:
 
 	// < (baAlex) >
 	Ic::Accuracy m_accuracy;
+
 	Ic::GeneralizedWeapon* m_current_weapon;
+	Ic::GeneralizedWeapon* m_previous_weapon;
 
 	Ic::PistolWeapon m_pistol;   // We have few weapons, so no inventory
 	Ic::ShotgunWeapon m_shotgun; // is truly needed

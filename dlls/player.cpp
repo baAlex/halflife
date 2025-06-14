@@ -3146,7 +3146,9 @@ void CBasePlayer::Spawn( void )
 	{
 		// (baAlex)
 		m_accuracy.Initialise();
+
 		m_current_weapon = &m_pistol;
+		m_previous_weapon = nullptr;
 
 		m_pistol.Initialise();
 		m_shotgun.Initialise();
@@ -3364,6 +3366,7 @@ void CBasePlayer::SelectItem(const char *pstr)
 
 		if (new_weapon != nullptr && new_weapon != m_current_weapon)
 		{
+			m_previous_weapon = m_current_weapon;
 			m_current_weapon = new_weapon;
 			return;
 		}
@@ -3415,6 +3418,17 @@ void CBasePlayer::SelectItem(const char *pstr)
 
 void CBasePlayer::SelectLastItem(void)
 {
+	// (baAlex)
+	{
+		if (m_previous_weapon == nullptr)
+			return;
+
+		auto temp = m_current_weapon;
+		m_current_weapon = m_previous_weapon;
+		m_previous_weapon = temp;
+	}
+
+#if 0 // (baAlex)
 	if (!m_pLastItem)
 	{
 		return;
@@ -3436,6 +3450,7 @@ void CBasePlayer::SelectLastItem(void)
 	m_pLastItem = pTemp;
 	m_pActiveItem->Deploy( );
 	m_pActiveItem->UpdateItemInfo( );
+#endif
 }
 
 //==============================================
