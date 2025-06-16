@@ -2754,10 +2754,9 @@ void CBasePlayer::PostThink()
 				                p->accuracy_decay);
 
 				// Effects
-				// TODO, I need to use PLAYBACK_EVENT_FULL for this, so it
-				// respects proper server-client separation
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON,
-				           p->sound_fire, 1, ATTN_NORM);
+				// (TODO, check how FEV_NOTHOST interacts with 'cl_lw')
+				g_engfuncs.pfnPlaybackEvent(FEV_NOTHOST, edict(), g_engfuncs.pfnPrecacheEvent(1, p->event_fire), 0.0f,
+				                            (float *)(&g_vecZero), (float *)(&g_vecZero), 0.0f, 0.0f, 0, 0, 0, 0 );
 			}
 
 			// Tell client the news

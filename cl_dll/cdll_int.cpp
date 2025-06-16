@@ -56,6 +56,7 @@ extern "C"
 #include "ic/view.hpp"
 #include "ic/accuracy.hpp"
 #include "ic/game_constants.hpp"
+#include "ic/events.hpp"
 
 
 static Ic::Accuracy s_client_side_accuracy;
@@ -172,6 +173,8 @@ int CL_DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
 
 	EV_HookEvents();
 	CL_LoadParticleMan();
+
+	Ic::HookEvents();
 
 	// get tracker interface, if any
 	return 1;

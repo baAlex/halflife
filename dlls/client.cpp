@@ -40,6 +40,10 @@
 #include "netadr.h"
 #include "pm_shared.h"
 
+
+#include "ic/weapons.hpp"
+
+
 #if !defined ( _WIN32 )
 #include <ctype.h>
 #endif
@@ -923,6 +927,15 @@ void ClientPrecache( void )
 
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
+
+	// (baAlex)
+	// Player entity's precache function is called too late, so this
+	// is the correct place
+	g_engfuncs.pfnPrecacheEvent(1, Ic::PistolWeapon::PROPS.event_fire);
+	g_engfuncs.pfnPrecacheEvent(1, Ic::ShotgunWeapon::PROPS.event_fire);
+	g_engfuncs.pfnPrecacheEvent(1, Ic::SmgWeapon::PROPS.event_fire);
+	g_engfuncs.pfnPrecacheEvent(1, Ic::ArWeapon::PROPS.event_fire);
+	g_engfuncs.pfnPrecacheEvent(1, Ic::RifleWeapon::PROPS.event_fire);
 }
 
 /*

@@ -40,7 +40,7 @@ struct WeaponProperties
 	float accuracy_force; // [1]
 	float accuracy_decay; // [2]
 
-	const char* sound_fire;
+	const char* event_fire;
 
 	// [1] Right now I'm using this to communicate: "Look how good this
 	// weapon is", those with lower force being "better"
@@ -153,13 +153,13 @@ class PistolWeapon final : public GeneralizedWeapon
 {
   public:
 	static constexpr WeaponProperties PROPS = {
-	    1,                     // Id
-	    "Pistol",              // Short name
-	    1,                     // Modes number
-	    {WeaponMode::Semi},    // Modes
-	    1.0f / 5.0f,           // Accuracy force
-	    5.0f,                  // Accuracy decay
-	    "weapons/pl_gun3.wav", // Fire sound
+	    1,                      // Id
+	    "Pistol",               // Short name
+	    1,                      // Modes number
+	    {WeaponMode::Semi},     // Modes
+	    1.0f / 5.0f,            // Accuracy force
+	    5.0f,                   // Accuracy decay
+	    "events/weapon_ic1.sc", // Fire event
 	};
 
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
@@ -194,7 +194,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Semi, WeaponMode::Manual}, // Modes
 	    2.0f / 5.0f,                            // Accuracy force
 	    4.0f,                                   // Accuracy decay
-	    "weapons/sbarrel1.wav",                 // Fire sound
+	    "events/weapon_ic2.sc",                 // Fire event
 	};
 
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
@@ -230,7 +230,7 @@ class SmgWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
 	    0.75f / 5.0f,                              // Accuracy force
 	    6.0f,                                      // Accuracy decay
-	    "weapons/pl_gun1.wav",                     // Fire sound
+	    "events/weapon_ic3.sc",                    // Fire event
 	};
 
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
@@ -265,7 +265,7 @@ class ArWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
 	    0.75f / 5.0f,                              // Accuracy force
 	    7.0f,                                      // Accuracy decay
-	    "weapons/hks1.wav",                        // Fire sound
+	    "events/weapon_ic4.sc",                    // Fire event
 	};
 
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
@@ -294,13 +294,13 @@ class RifleWeapon final : public GeneralizedWeapon
 {
   public:
 	static constexpr WeaponProperties PROPS = {
-	    5,                       // Id
-	    "Rifle",                 // Short name
-	    1,                       // Modes number
-	    {WeaponMode::Manual},    // Modes
-	    0.5f / 5.0f,             // Accuracy force
-	    3.0f,                    // Accuracy decay
-	    "weapons/357_shot1.wav", // Fire sound
+	    5,                      // Id
+	    "Rifle",                // Short name
+	    1,                      // Modes number
+	    {WeaponMode::Manual},   // Modes
+	    0.5f / 5.0f,            // Accuracy force
+	    3.0f,                   // Accuracy decay
+	    "events/weapon_ic5.sc", // Fire event
 	};
 
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {

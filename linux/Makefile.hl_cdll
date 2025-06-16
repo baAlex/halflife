@@ -35,6 +35,7 @@ DO_PM_SHARED_CC=$(CC) $(INCLUDEDIRS)  $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 #####################################################################
 
 HL1_OBJS = \
+	$(HL1_OBJ_DIR)/ic/events.o \
 	$(HL1_OBJ_DIR)/ic/hud.o \
 	$(HL1_OBJ_DIR)/ic/messages.o \
 	$(HL1_OBJ_DIR)/ic/view.o \
