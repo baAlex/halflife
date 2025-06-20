@@ -344,6 +344,8 @@ public:
 	Ic::SmgWeapon m_smg;
 	Ic::ArWeapon m_ar;
 	Ic::RifleWeapon m_rifle;
+
+	uint16_t m_weapons_rng;
 	// </ (baAlex) >
 };
 

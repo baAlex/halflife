@@ -129,5 +129,7 @@ float Ic::Accuracy::Get() const
 		// return x * x; // Bad idea, makes it feel more "smooth" or "delayed"
 	};
 
-	return easing((m_crouch + m_air + m_look_speed + m_walk_speed) * NORMALISE + m_fire);
+	return m_fire; // TODO
+
+	// return easing((m_crouch + m_air + m_look_speed + m_walk_speed) * NORMALISE + m_fire);
 }

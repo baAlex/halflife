@@ -13,6 +13,8 @@ defined by the Mozilla Public License, v. 2.0.
 #ifndef IC_BASE_HPP
 #define IC_BASE_HPP
 
+#include <stdint.h>
+
 namespace Ic
 {
 
@@ -44,6 +46,10 @@ float HolmerMix(float a, float b, float d, float dt);
 float AnglesHolmerMix(float a, float b, float d, float dt);
 
 float ClampAroundCentre(float x, float centre, float range);
+
+uint16_t Xorshift16(uint16_t x);      // Don't pass a zero, also, function will never return zero
+uint16_t Xorshift16(uint16_t* state); // Don't pass a zero, also, function will never return zero
+float RandomFloat(uint16_t* state);   // Don't pass a zero
 
 } // namespace Ic
 

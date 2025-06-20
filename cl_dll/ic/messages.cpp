@@ -14,6 +14,7 @@
  ****/
 
 // ORDER OF INCLUDES IS THIS AND NO OTHER
+#include "cvardef.h"
 #include "wrect.h"
 #include "cl_dll.h"
 #include "parsemsg.h"
@@ -32,6 +33,8 @@ static const Ic::ClosedBoltBehaviour::Properties* s_weapon_behaviour_props;
 static float s_accuracy[2];
 static float s_speed;
 static float s_max_speed;
+
+static int s_developer_level;
 
 
 static int sHealthChanges(const char* name, int size, void* pbuf)
@@ -67,8 +70,8 @@ static int sWeaponState(const char* name, int size, void* pbuf)
 
 	Ic::RetrieveWeaponProps(s_weapon_state.id, &s_weapon_props, &s_weapon_behaviour_props);
 
-	gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon_state.mode, s_weapon_state.chamber,
-	                     s_weapon_state.magazine);
+	// gEngfuncs.Con_Printf("Weapon state changes: %i, %i, %i\n", s_weapon_state.mode, s_weapon_state.chamber,
+	//                      s_weapon_state.magazine);
 	return 1;
 }
 
@@ -78,6 +81,12 @@ void Ic::MessagesInitialise()
 	gEngfuncs.pfnHookUserMsg("Health", sHealthChanges);
 	gEngfuncs.pfnHookUserMsg("Damage", sDamageReceive);
 	gEngfuncs.pfnHookUserMsg("WeaponState", sWeaponState);
+
+	{
+		const auto dev_cvar = gEngfuncs.pfnGetCvarPointer("developer");
+		gEngfuncs.pfnAddCommand("dev_dashboard", []() { s_developer_level = (s_developer_level + 1) % 3; });
+		s_developer_level = (dev_cvar != nullptr) ? static_cast<int>(dev_cvar->value) : 0;
+	}
 
 	// TODO: there are a lot of messages currently sent by player
 	// that are not received anywhere, they remain in 'ammo.cpp'
@@ -148,4 +157,9 @@ const char* Ic::GetWeaponName()
 		return "Unknown";
 
 	return s_weapon_props->short_name;
+}
+
+int Ic::GetDeveloperLevel()
+{
+	return s_developer_level;
 }

@@ -64,3 +64,31 @@ float Ic::ClampAroundCentre(float x, float centre, float range)
 {
 	return centre + Max(-range, Min(x - centre, range));
 }
+
+
+uint16_t Ic::Xorshift16(uint16_t x)
+{
+	// http://www.retroprogramming.com/2017/07/xorshift-pseudorandom-numbers-in-z80.html
+	// assert(x != 0);
+	x ^= static_cast<uint16_t>(x << 7);
+	x ^= static_cast<uint16_t>(x >> 9);
+	x ^= static_cast<uint16_t>(x << 8);
+	return x;
+}
+
+uint16_t Ic::Xorshift16(uint16_t* state)
+{    uint16_t x = *state;
+    x ^= x << 7;
+    x ^= x >> 9;
+    x ^= x << 8;
+    *state = x;
+    return x;
+}
+
+static constexpr float SCALE = 1.0f / 65536.0f;
+
+float Ic::RandomFloat(uint16_t* state)
+{
+	const uint16_t x = Xorshift16(state);
+	return (static_cast<float>(x) * SCALE);
+}

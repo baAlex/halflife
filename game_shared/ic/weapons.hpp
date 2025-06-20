@@ -39,20 +39,18 @@ struct WeaponProperties
 
 	float accuracy_force; // [1]
 	float accuracy_decay; // [2]
+	float spread;
+
+	int pellets_no;
+	float pellets_dispersion;
 
 	const char* event_fire;
+	const char* fire_sound;
 
-	// [1] Right now I'm using this to communicate: "Look how good this
-	// weapon is", those with lower force being "better"
+	// [1] Formula '1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2)' means:
+	// 'accuracy reaches 1 half way the magazine'. One being bad accuracy, two terrible.
+
 	// [2] Decay communicating an optimal rate/cadence of fire to adopt
-
-	// Should be great to derive those two from empirical data, like
-	// weapon mass, length, calibre, rate of fire, etc... but right now
-	// I'm not sure what I want to communicate, decay feels right but
-	// not force. Also, I don´t want to waste time on this right now,
-	// to later discover tiny caveats like accuracy being exponential
-	// or that, extrapolate weapons spreads from this would require some
-	// different approach. All a work for the future (TODO)
 };
 
 
@@ -152,20 +150,24 @@ class GeneralizedWeapon
 class PistolWeapon final : public GeneralizedWeapon
 {
   public:
-	static constexpr WeaponProperties PROPS = {
-	    1,                      // Id
-	    "Pistol",               // Short name
-	    1,                      // Modes number
-	    {WeaponMode::Semi},     // Modes
-	    1.0f / 5.0f,            // Accuracy force
-	    5.0f,                   // Accuracy decay
-	    "events/weapon_ic1.sc", // Fire event
-	};
-
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 2000.0, // Bolt travel duration
 	    17,            // Magazine size
 	    0.2,           // Cock duration
+	};
+
+	static constexpr WeaponProperties PROPS = {
+	    1,                                                            // Id
+	    "Pistol",                                                     // Short name
+	    1,                                                            // Modes number
+	    {WeaponMode::Semi},                                           // Modes
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
+	    2.0f / 1.0f,                                                  // Accuracy decay
+	    1500.0f,                                                      // Spread
+	    1,                                                            // Pellets
+	    0.0f,                                                         // Pellets dispersion
+	    "events/pistol-fire.sc",                                      // Fire event
+	    "weapons/pistol-fire.wav",                                    // Fire sound
 	};
 
 	void Initialise();
@@ -187,20 +189,24 @@ class PistolWeapon final : public GeneralizedWeapon
 class ShotgunWeapon final : public GeneralizedWeapon
 {
   public:
-	static constexpr WeaponProperties PROPS = {
-	    2,                                      // Id
-	    "Shotgun",                              // Short name
-	    2,                                      // Modes number
-	    {WeaponMode::Semi, WeaponMode::Manual}, // Modes
-	    2.0f / 5.0f,                            // Accuracy force
-	    4.0f,                                   // Accuracy decay
-	    "events/weapon_ic2.sc",                 // Fire event
-	};
-
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 350.0, // Bolt travel duration
 	    7,            // Magazine size
 	    0.5,          // Cock duration
+	};
+
+	static constexpr WeaponProperties PROPS = {
+	    2,                                                            // Id
+	    "Shotgun",                                                    // Short name
+	    2,                                                            // Modes number
+	    {WeaponMode::Semi, WeaponMode::Manual},                       // Modes
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size - 1), // Accuracy force
+	    2.0f / 2.0f,                                                  // Accuracy decay
+	    3000.0f,                                                      // Spread
+	    12,                                                           // Pellets
+	    256.0f,                                                       // Pellets dispersion
+	    "events/shotgun-fire.sc",                                     // Fire event
+	    "weapons/shotgun-fire.wav",                                   // Fire sound
 	};
 
 	void Initialise();
@@ -223,20 +229,24 @@ class ShotgunWeapon final : public GeneralizedWeapon
 class SmgWeapon final : public GeneralizedWeapon
 {
   public:
-	static constexpr WeaponProperties PROPS = {
-	    3,                                         // Id
-	    "SMG",                                     // Short name
-	    2,                                         // Modes number
-	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
-	    0.75f / 5.0f,                              // Accuracy force
-	    6.0f,                                      // Accuracy decay
-	    "events/weapon_ic3.sc",                    // Fire event
-	};
-
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 1100.0, // Bolt travel duration (this is different, in comparison an MP5 is 850 just like an AR)
 	    20,            // Magazine size
 	    0.25,          // Cock duration
+	};
+
+	static constexpr WeaponProperties PROPS = {
+	    3,                                                            // Id
+	    "SMG",                                                        // Short name
+	    2,                                                            // Modes number
+	    {WeaponMode::Automatic, WeaponMode::Semi},                    // Modes
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
+	    2.0f / 0.75f,                                                 // Accuracy decay
+	    2500.0f,                                                      // Spread
+	    1,                                                            // Pellets
+	    0.0f,                                                         // Pellets dispersion
+	    "events/smg-fire.sc",                                         // Fire event
+	    "weapons/smg-fire.wav",                                       // Fire sound
 	};
 
 	void Initialise();
@@ -258,20 +268,24 @@ class SmgWeapon final : public GeneralizedWeapon
 class ArWeapon final : public GeneralizedWeapon
 {
   public:
-	static constexpr WeaponProperties PROPS = {
-	    4,                                         // Id
-	    "AR",                                      // Short name
-	    2,                                         // Modes number
-	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
-	    0.75f / 5.0f,                              // Accuracy force
-	    7.0f,                                      // Accuracy decay
-	    "events/weapon_ic4.sc",                    // Fire event
-	};
-
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 850.0, // Bolt travel duration
 	    30,           // Magazine size, NATO be like this
 	    0.25,         // Cock duration
+	};
+
+	static constexpr WeaponProperties PROPS = {
+	    4,                                                            // Id
+	    "AR",                                                         // Short name
+	    2,                                                            // Modes number
+	    {WeaponMode::Automatic, WeaponMode::Semi},                    // Modes
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
+	    2.0f / 1.25f,                                                 // Accuracy decay
+	    2048.0f,                                                      // Spread
+	    1,                                                            // Pellets
+	    0.0f,                                                         // Pellets dispersion
+	    "events/ar-fire.sc",                                          // Fire event
+	    "weapons/ar-fire.wav",                                        // Fire sound
 	};
 
 	void Initialise();
@@ -293,20 +307,24 @@ class ArWeapon final : public GeneralizedWeapon
 class RifleWeapon final : public GeneralizedWeapon
 {
   public:
-	static constexpr WeaponProperties PROPS = {
-	    5,                      // Id
-	    "Rifle",                // Short name
-	    1,                      // Modes number
-	    {WeaponMode::Manual},   // Modes
-	    0.5f / 5.0f,            // Accuracy force
-	    3.0f,                   // Accuracy decay
-	    "events/weapon_ic5.sc", // Fire event
-	};
-
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 4000.0, // Bolt travel duration (barely moves in a bolt action)
 	    5,             // Magazine size
 	    1.5,           // Cock duration (manual cock is what determines rate of fire)
+	};
+
+	static constexpr WeaponProperties PROPS = {
+	    5,                                                        // Id
+	    "Rifle",                                                  // Short name
+	    1,                                                        // Modes number
+	    {WeaponMode::Manual},                                     // Modes
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size), // Accuracy force
+	    2.0f / 1.25f,                                             // Accuracy decay
+	    1000.0f,                                                  // Spread
+	    1,                                                        // Pellets
+	    0.0f,                                                     // Pellets dispersion
+	    "events/rifle-fire.sc",                                   // Fire event
+	    "weapons/rifle-fire.wav",                                 // Fire sound
 	};
 
 	void Initialise();

@@ -38,6 +38,7 @@ const char* GetWeaponMode();
 int GetChamberAmmo();
 int GetMagazineAmmo();
 const char* GetWeaponName();
+int GetDeveloperLevel();
 
 } // namespace Ic
 

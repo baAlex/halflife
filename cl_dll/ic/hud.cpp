@@ -31,7 +31,6 @@
 static SCREENINFO_s s_screen;
 static int s_margin = 15; // TODO, should change according resolution
 
-static int s_developer_level;
 static float s_prev_time;
 
 
@@ -87,7 +86,7 @@ class DevDashboard
 		(void)time;
 		struct rect_s rect;
 
-		if (s_developer_level > 0)
+		if (Ic::GetDeveloperLevel() > 0)
 		{
 			const int height = sFontHeight(m_dev_font);
 
@@ -158,7 +157,7 @@ class Crosshair
 			gEngfuncs.pfnSPR_DrawHoles(1, s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 - gap - m_v_h, &rect);
 		}
 
-		if (s_developer_level > 1)
+		if (Ic::GetDeveloperLevel() > 1)
 		{
 			const int gap = MINIMUM_GAP + static_cast<int>(roundf(Ic::GetAccuracy(Ic::Side::Server) * AMPLITUDE));
 
@@ -185,8 +184,6 @@ void Ic::HudInitialise()
 	s_screen.iSize = sizeof(SCREENINFO_s); // Silly versioning thing
 	gEngfuncs.pfnGetScreenInfo(&s_screen);
 
-	gEngfuncs.pfnAddCommand("dev_dashboard", []() { s_developer_level = (s_developer_level + 1) % 3; });
-
 	s_dev_dashboard.Initialise();
 	s_crosshair.Initialise();
 
@@ -196,10 +193,6 @@ void Ic::HudInitialise()
 void Ic::HudSoftInitialise()
 {
 	gEngfuncs.Con_Printf("### Ic::HudSoftInitialise()\n");
-
-	const auto dev_cvar = gEngfuncs.pfnGetCvarPointer("developer");
-
-	s_developer_level = (dev_cvar != nullptr) ? static_cast<int>(dev_cvar->value) : 0;
 	s_prev_time = 0.0f;
 }
 

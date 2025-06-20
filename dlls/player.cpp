@@ -2749,14 +2749,20 @@ void CBasePlayer::PostThink()
 			{
 				const auto p = m_current_weapon->GetWeaponProperties();
 
+				// Effects
+				// (TODO, check how FEV_NOTHOST interacts with 'cl_lw')
+				uint16_t seed = m_weapons_rng >> 1; // pfnPlaybackEvent() clamps at 15 bits
+				// g_engfuncs.pfnAlertMessage(at_console, "%u\n", seed);
+
+				g_engfuncs.pfnPlaybackEvent(0, edict(), g_engfuncs.pfnPrecacheEvent(1, p->event_fire), 0.0f,
+				                            (float *)(&g_vecZero), (float *)(&g_vecZero), m_accuracy.Get(), 0.0f,
+				                            state.rounds_fired, static_cast<int>(seed), 0, 0);
+
+				Ic::Xorshift16(&m_weapons_rng); // TODO, I should mimic what clien does
+
 				// Accuracy
 				m_accuracy.Fire(p->accuracy_force * static_cast<float>(state.rounds_fired),
 				                p->accuracy_decay);
-
-				// Effects
-				// (TODO, check how FEV_NOTHOST interacts with 'cl_lw')
-				g_engfuncs.pfnPlaybackEvent(FEV_NOTHOST, edict(), g_engfuncs.pfnPrecacheEvent(1, p->event_fire), 0.0f,
-				                            (float *)(&g_vecZero), (float *)(&g_vecZero), 0.0f, 0.0f, 0, 0, 0, 0 );
 			}
 
 			// Tell client the news
@@ -3146,14 +3152,16 @@ void CBasePlayer::Spawn( void )
 		// (baAlex)
 		m_accuracy.Initialise();
 
-		m_current_weapon = &m_pistol;
-		m_previous_weapon = nullptr;
+		m_current_weapon = &m_shotgun;
+		m_previous_weapon = &m_ar;
 
 		m_pistol.Initialise();
 		m_shotgun.Initialise();
 		m_smg.Initialise();
 		m_ar.Initialise();
 		m_rifle.Initialise();
+
+		m_weapons_rng = 123;
 	}
 
 	g_pGameRules->PlayerSpawn( this );
