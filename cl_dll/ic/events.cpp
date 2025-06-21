@@ -29,6 +29,7 @@
 #include "ic/weapons.hpp"
 #include "ic/base.hpp"
 #include "ic/messages.hpp"
+#include "ic/material.hpp"
 
 #include <string.h>
 
@@ -40,7 +41,45 @@ static float sEasing(float x)
 }
 
 
-const char* s_decal_name[5] = {"{shot1", "{shot2", "{shot3", "{shot4", "{shot5"};
+template <typename W>
+static void sImpact(int impacted_entity_index, int impacted_model, const float* start, const float* trace_end,
+                    const char* texture_name)
+{
+	float* start_pos = (float*)start; // Disgusting char* casts, Valve please fix
+	float* end_pos = (float*)trace_end;
+
+	const physent_s* entity = gEngfuncs.pEventAPI->EV_GetPhysent(impacted_entity_index);
+
+	// Filter where not, do an impact
+	if (texture_name == nullptr || strcmp(texture_name, "sky") == 0)
+		return;
+
+	if (entity == nullptr || (entity->solid != SOLID_BSP && entity->movetype != MOVETYPE_PUSHSTEP))
+		return;
+
+	// Particles
+	gEngfuncs.pEfxAPI->R_BulletImpactParticles(end_pos);
+
+	// Sound
+	const Ic::Material mat = Ic::GetMaterial(texture_name);
+
+	const int rand1 = gEngfuncs.pfnRandomLong(0, Ic::Material::VARIATIONS_NO - 1);
+	const int rand2 = gEngfuncs.pfnRandomLong(0, Ic::Material::VARIATIONS_NO - 1);
+
+	gEngfuncs.pEventAPI->EV_PlaySound(
+	    0, end_pos, CHAN_STATIC, (char*)(mat.impact_sounds[rand1]),
+	    gEngfuncs.pfnRandomFloat(0.8f, 0.9f) /
+	        sqrtf(static_cast<float>(W::PROPS.pellets_no)), // Something to compensate being linear
+	    ATTN_NORM, 0, 98 + rand2);
+
+	// Decal
+	if (mat.decals != nullptr && gEngfuncs.pfnGetCvarFloat("r_decals") > 0.0f)
+	{
+		gEngfuncs.pEfxAPI->R_DecalShoot(
+		    gEngfuncs.pEfxAPI->Draw_DecalIndex(gEngfuncs.pEfxAPI->Draw_DecalIndexFromName((char*)(mat.decals[rand1]))),
+		    impacted_model, 0, end_pos, 0);
+	}
+}
 
 
 static float sClientSideOrigin(int entity, const float* server_origin, bool server_crouch, float* out)
@@ -73,6 +112,9 @@ template <typename W>
 static void sGenericEvent(int entity, float* origin, float* angles, bool crouch, float accuracy, int rounds_no,
                           int seed)
 {
+	const int dev_sprite = gEngfuncs.pEventAPI->EV_FindModelIndex("sprites/smoke.spr");
+	float dev_colour[3];
+
 	pmtrace_t tr; // Omg, so Quake-ish!
 	float forward[3];
 	float right[3];
@@ -87,7 +129,7 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 
 	// Sound
 	gEngfuncs.pEventAPI->EV_PlaySound(entity, origin, CHAN_WEAPON, W::PROPS.fire_sound,
-	                                  gEngfuncs.pfnRandomFloat(0.92, 1.0), ATTN_NORM, 0,
+	                                  gEngfuncs.pfnRandomFloat(0.92f, 1.0f), ATTN_NORM, 0,
 	                                  98 + gEngfuncs.pfnRandomLong(0, 3));
 
 	// Set some things before loop
@@ -95,6 +137,8 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 
 	sClientSideOrigin(entity, origin, crouch, client_side_origin);
 	origin[2] += static_cast<float>((crouch == false) ? DEFAULT_VIEWHEIGHT : VEC_DUCK_VIEW);
+
+	gEngfuncs.pEventAPI->EV_PushPMStates();
 
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers(entity - 1); // A global state, configuration thing
 	gEngfuncs.pEventAPI->EV_SetTraceHull(2);             // for the tracer logic
@@ -116,6 +160,12 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 			float pellet_dispersion_x = round_spread_x;
 			float pellet_dispersion_y = round_spread_y;
 
+			{
+				dev_colour[0] = (p == 0) ? 0.25f : 0.1f;
+				dev_colour[1] = (p == 0) ? 0.25f : 0.0f;
+				dev_colour[2] = (p == 0) ? 0.25f : 0.0f;
+			}
+
 			// Calculate pellet dispersion
 			if (p > 0)
 			{
@@ -134,25 +184,39 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 			gEngfuncs.pEventAPI->EV_PlayerTrace(origin, end, PM_NORMAL, -1, &tr);
 
 			// Place a decal and a impact effect
-			physent_s* pe = gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent);
-			const char* texture = gEngfuncs.pEventAPI->EV_TraceTexture(tr.ent, origin, end);
-
-			if (pe && strcmp(texture, "sky") != 0 && (pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP))
+			float temp[3];
 			{
-				gEngfuncs.pEfxAPI->R_BulletImpactParticles(tr.endpos);
+				temp[0] = tr.endpos[0] + tr.plane.normal[0] * 2.0f;
+				temp[1] = tr.endpos[1] + tr.plane.normal[1] * 2.0f;
+				temp[2] = tr.endpos[2] + tr.plane.normal[2] * 2.0f;
+				end[0] = tr.endpos[0] - tr.plane.normal[0] * 2.0f;
+				end[1] = tr.endpos[1] - tr.plane.normal[1] * 2.0f;
+				end[2] = tr.endpos[2] - tr.plane.normal[2] * 2.0f;
 
-				if (gEngfuncs.pfnGetCvarFloat("r_decals") > 0.0f)
+				// EV_TraceTexture() is quite imprecise, so rather than let it cast from eyes all
+				// the way to target, we only let it trace from points near the already traced surface
+				const char* texture_name = gEngfuncs.pEventAPI->EV_TraceTexture(tr.ent, temp, end);
+				// gEngfuncs.Con_Printf("#### IcEventX(), '%s'\n", texture_name);
+
+				sImpact<W>(tr.ent, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), origin, tr.endpos, texture_name);
+
+				// Render a line (for debuging purposes)
+				if (Ic::GetDeveloperLevel() > 1)
 				{
-					gEngfuncs.pEfxAPI->R_DecalShoot(
-					    gEngfuncs.pEfxAPI->Draw_DecalIndex(
-					        gEngfuncs.pEfxAPI->Draw_DecalIndexFromName(s_decal_name[gEngfuncs.pfnRandomLong(0, 4)])),
-					    gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), 0, tr.endpos, 0);
+					gEngfuncs.pEfxAPI->R_BeamPoints(temp, tr.endpos, dev_sprite, //
+					                                8.0f,                        // Life
+					                                1.0f,                        // Width
+					                                0.0f,                        // Amplitude
+					                                1.0f,                        // Brightness
+					                                0,                           // Speed
+					                                0,                           // Start frame
+					                                0,                           // Frame rate
+					                                dev_colour[0] * 4.0f, dev_colour[1] * 4.0f, dev_colour[2] * 4.0f);
 				}
 			}
 
 			// Render tracer
 			// Here using 'client_side_origin', as is purely for aesthetics reasons
-			float temp[3];
 			float temp_temp[3];
 
 			temp[0] = client_side_origin[0] - up[0] * 3.0f + right[0] * 1.0f; // TODO, there has to be a better
@@ -165,13 +229,10 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 
 			gEngfuncs.pEfxAPI->R_TracerEffect(temp, tr.endpos);
 
-			// Render a line (for debuging purposes)
+			// Render more lines (for more debuging purposes)
 			if (Ic::GetDeveloperLevel() > 1)
 			{
-				float colour[3] = {(p == 0) ? 0.25f : 0.1f, (p == 0) ? 0.25f : 0.0f, (p == 0) ? 0.25f : 0.0f};
-				const auto sprite = gEngfuncs.pEventAPI->EV_FindModelIndex("sprites/smoke.spr");
-
-				gEngfuncs.pEfxAPI->R_BeamPoints(temp_temp, tr.endpos, sprite,     //
+				gEngfuncs.pEfxAPI->R_BeamPoints(temp_temp, tr.endpos, dev_sprite, //
 				                                4.0f,                             // Life
 				                                0.5f,                             // Width
 				                                0.0f,                             // Amplitude
@@ -179,10 +240,12 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 				                                0,                                // Speed
 				                                0,                                // Start frame
 				                                0,                                // Frame rate
-				                                colour[0], colour[1], colour[2]); // Colour
+				                                dev_colour[0], dev_colour[1], dev_colour[2]);
 			}
 		}
 	}
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
 }
 
 
