@@ -106,7 +106,7 @@ static void sSway(const float* view_angles, float dt, float* out_model_angles)
 #ifdef LEAN
 static Ic::Vector3 s_lean;
 static constexpr Ic::Vector3 LEAN_AMOUNT = {8.0f * 0.8f, 6.0f * 0.8f, 6.0f * 0.8f};
-static constexpr float LEAN_SMOOTH = 10.0f;
+static constexpr float LEAN_SMOOTH = 5.0f;
 static constexpr Ic::Vector2 LEAN_Z_CLAMP = {-2.0f, 6.0f};
 
 static void sLean(const float* view_angles, const float* velocity, float dt, float* out_model_angles,
@@ -153,34 +153,39 @@ static void sCrouch(int crouch, float dt, float* out_model_z)
 
 
 #ifdef BOB
-static float s_walk_speed;
-static constexpr float SPEED_THRESHOLD = 10.0f;
-static constexpr float WALK_SMOOTH = 5.0f;
+static float bob_switch;
+static constexpr float WALK_SMOOTH = 3.0f;
 
 static float s_bob[2];
-static constexpr float BOB_AMOUNT[2] = {1.5f * 0.3f, 1.5f * 0.2f};
-static constexpr float BOB_SPEED[2] = {1.0f * 12.0f, 1.0f * 6.0f};
+static constexpr float BOB_AMOUNT[2] = {1.25f * 0.3f, 1.25f * 0.4f};
+static constexpr float BOB_SPEED[2] = {(M_PI * 2.0) / 0.45f, (M_PI * 1.0) / 0.45f};
+
+float sEasingOut(float x)
+{
+	return 1.0f - powf(1.0f - x, 5.0f);
+}
+
+float sEasingIn(float x)
+{
+	const float f = 1.30f;
+	return 2.0f - powf((x + 1.0f) * 0.5f, f) * 2.0f;
+}
 
 static void sBob(int on_ground, const float* up, const float* right, const float* velocity, float dt,
                  float* out_model_origin)
 {
 	float speed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
 
-	if (on_ground == 0 || speed < SPEED_THRESHOLD)
-		speed = 0.0f;
+	// Smooth switch
+	bob_switch = Ic::HolmerMix((on_ground == 0 || speed < 40.0f) ? 0.0f : 1.0f, bob_switch, WALK_SMOOTH, dt);
 
-	speed /= Ic::PLAYER_MAX_SPEED;
-	speed = Ic::Clamp(speed, 0.0f, 1.5f); // In case that something went wrong
+	speed = sEasingOut(speed / Ic::PLAYER_MAX_SPEED) * bob_switch * dt; // From this line we need to apply 'dt'
 
-	// Smooth, all conditional above are hard ones
-	s_walk_speed = Ic::HolmerMix(speed, s_walk_speed, WALK_SMOOTH, dt);
+	sVecOp([&](int i) { out_model_origin[i] += bob_switch * BOB_AMOUNT[0] * sEasingIn(sinf(s_bob[0])) * up[i]; });
+	sVecOp([&](int i) { out_model_origin[i] += bob_switch * BOB_AMOUNT[1] * cosf(s_bob[1]) * right[i]; });
 
-	// Not a typo, i'm using speed as amplitude
-	sVecOp([&](int i) { out_model_origin[i] += sinf(s_bob[0]) * s_walk_speed * BOB_AMOUNT[0] * up[i]; });
-	sVecOp([&](int i) { out_model_origin[i] += cosf(s_bob[1]) * s_walk_speed * BOB_AMOUNT[1] * right[i]; });
-
-	s_bob[0] = fmodf(s_bob[0] + dt * BOB_SPEED[0], M_PI * 2.0f);
-	s_bob[1] = fmodf(s_bob[1] + dt * BOB_SPEED[1], M_PI * 2.0f);
+	s_bob[0] = fmodf(s_bob[0] + BOB_SPEED[0] * speed, M_PI * 2.0f);
+	s_bob[1] = fmodf(s_bob[1] + BOB_SPEED[1] * speed, M_PI * 2.0f);
 }
 #endif
 
