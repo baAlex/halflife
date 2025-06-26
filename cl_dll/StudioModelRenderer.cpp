@@ -1240,6 +1240,10 @@ int CStudioModelRenderer::StudioDrawModel( int flags )
 		lighting.plightvec = dir;
 		IEngineStudio.StudioDynamicLight(m_pCurrentEntity, &lighting );
 
+		dir[0] = 0.0f; // (baAlex), TODO: let map choose angles (to match skybox)
+		dir[1] = 1.0f;
+		dir[2] = 0.0f;
+
 		IEngineStudio.StudioEntityLight( &lighting );
 
 		// model and frame independant
