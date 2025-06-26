@@ -147,8 +147,8 @@ void CL_DLLEXPORT HUD_PlayerMoveInit( struct playermove_s *ppmove )
 char CL_DLLEXPORT HUD_PlayerMoveTexture( char *name )
 {
 //	RecClClientTextureType(name);
-
-	return PM_FindTextureType( name );
+	return 'C'; // TODO, engine is actually using it?
+	// return PM_FindTextureType( name );
 }
 
 void CL_DLLEXPORT HUD_PlayerMove( struct playermove_s *ppmove, int server )

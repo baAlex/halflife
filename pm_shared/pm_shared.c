@@ -289,6 +289,8 @@ char PM_FindTextureType( char *name )
 	return CHAR_TEX_CONCRETE;
 }
 
+
+#if 0 // (baAlex)
 void PM_PlayStepSound( int step, float fvol )
 {
 	static int iSkipStep = 0;
@@ -436,6 +438,8 @@ void PM_PlayStepSound( int step, float fvol )
 		break;
 	}
 }	
+#endif
+
 
 int PM_MapTextureTypeStepType(char chTextureType)
 {
@@ -493,6 +497,8 @@ void PM_CatagorizeTextureType( void )
 	pmove->chtexturetype = PM_FindTextureType( pmove->sztexturename );	
 }
 
+
+#if 0 // (baAlex)
 void PM_UpdateStepSound( void )
 {
 	int	fWalking;
@@ -631,6 +637,127 @@ void PM_UpdateStepSound( void )
 		PM_PlayStepSound( step, fvol );
 	}
 }
+#endif
+
+
+static const char* s_concrete_sound[4] = {"footsteps/concrete-1.wav", "footsteps/concrete-2.wav", "footsteps/concrete-3.wav", "footsteps/concrete-4.wav"};
+static const char* s_metal_sound[4] = {"footsteps/metal-1.wav", "footsteps/metal-2.wav", "footsteps/metal-3.wav", "footsteps/metal-4.wav"};
+static const char* s_wood_sound[4] = {"footsteps/wood-1.wav", "footsteps/wood-2.wav", "footsteps/wood-3.wav", "footsteps/wood-4.wav"};
+static const char* s_dirt_sound[4] = {"footsteps/dirt-1.wav", "footsteps/dirt-2.wav", "footsteps/dirt-3.wav", "footsteps/dirt-4.wav"};
+static const char* s_snow_sound[4] = {"footsteps/snow-1.wav", "footsteps/snow-2.wav", "footsteps/snow-3.wav", "footsteps/snow-4.wav"};
+
+static const char** s_sound[MAX_CLIENTS] =
+{
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
+};
+
+void IcPlayMaterialSound(float volume)
+{
+	const char* texture_name;
+
+	// Retrieve texture name
+	{
+		vec3_t start, end;
+		const float height = pmove->player_maxs[pmove->usehull][2] - pmove->player_mins[pmove->usehull][2];
+
+		VectorCopy(pmove->origin, start); // Valve copies them, so maybe they know
+		VectorCopy(pmove->origin, end);   // that trace function modifies its inputs
+
+		end[2] -= height;
+
+		texture_name = pmove->PM_TraceTexture(0, start, end);
+		// pmove->Con_Printf("### IcPlayMaterialSound(), '%s'\n", texture_name);
+	}
+
+	// Parse type nomenclature
+	// (copy paste from 'ic/material.cpp')
+	if (texture_name != NULL)
+	{
+		for (const char* c = texture_name; c != 0x00 && c < texture_name + 3; c += 1) // Yes, up to 3 characters
+		{
+			if (*c == '#')
+				break;
+			else if (*c == 'c')
+				s_sound[pmove->player_index] = s_concrete_sound;
+			else if (*c == 'm')
+				s_sound[pmove->player_index] = s_metal_sound;
+			else if (*c == 'w')
+				s_sound[pmove->player_index] = s_wood_sound;
+			else if (*c == 'd')
+				s_sound[pmove->player_index] = s_dirt_sound;
+			else if (*c == 's')
+				s_sound[pmove->player_index] = s_snow_sound;
+		}
+	}
+	else
+	{
+		// PM_TraceTexture() traces only one point, not the entire bounding box,
+		// thus on thin edges no texture is found. If that happens, we simply
+		// play last sound set and pretend that all is right.
+	}
+
+	// Play sound
+	const int rand = pmove->RandomLong(0, 3);
+	pmove->PM_PlaySound(CHAN_BODY, s_sound[pmove->player_index][rand], volume, ATTN_NORM, 0, PITCH_NORM);
+}
+
+
+void IcJumpLandSound()
+{
+	IcPlayMaterialSound(0.35f * 2.0f);
+}
+
+
+void IcPainSound()
+{
+	pmove->PM_PlaySound(CHAN_VOICE, "player/fall.wav", 1.0f, ATTN_NORM, 0, PITCH_NORM);
+}
+
+
+static float s_distance[MAX_CLIENTS];
+
+float sEasingOut(float x)
+{
+	return 1.0f - powf(1.0f - x, 5.0f);
+}
+
+void sWalkSound()
+{
+	if (pmove->runfuncs == 0)
+		return;
+	if (pmove->flags & FL_FROZEN)
+		return;
+	if (pmove->multiplayer && pmove->movevars->footsteps == 0)
+		return;
+	if (pmove->onground != 0)
+		return;
+
+	// Check if we should play it
+	{
+		const float speed = sqrtf(pmove->velocity[0] * pmove->velocity[0] + pmove->velocity[1] * pmove->velocity[1]);;
+		if (speed < 40.0f)
+			return;
+
+		s_distance[pmove->player_index] += sEasingOut((speed) / 400.0f) * pmove->frametime;
+		if (s_distance[pmove->player_index] < 0.45f)
+			return;
+
+		s_distance[pmove->player_index] = fmodf(s_distance[pmove->player_index], 0.45f);
+	}
+
+	// pmove->Con_Printf("### sWalkSound()\n");
+
+	// Play footstep
+	IcPlayMaterialSound(0.35f * 1.0f);
+}
+
 
 /*
 ================
@@ -2594,16 +2721,16 @@ void PM_Jump (void)
 			switch ( pmove->RandomLong( 0, 3 ) )
 			{ 
 			case 0:
-				pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade1.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+				// pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade1.wav", 1, ATTN_NORM, 0, PITCH_NORM ); // (baAlex)
 				break;
 			case 1:
-				pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+				// pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade2.wav", 1, ATTN_NORM, 0, PITCH_NORM ); // (baAlex)
 				break;
 			case 2:
-				pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade3.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+				// pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade3.wav", 1, ATTN_NORM, 0, PITCH_NORM ); // (baAlex)
 				break;
 			case 3:
-				pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade4.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+				// pmove->PM_PlaySound( CHAN_BODY, "player/pl_wade4.wav", 1, ATTN_NORM, 0, PITCH_NORM ); // (baAlex)
 				break;
 			}
 		}
@@ -2635,7 +2762,8 @@ void PM_Jump (void)
 	}
 	else
 	{
-		PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), 1.0 );
+		// PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), 1.0 );
+		IcJumpLandSound();
 	}
 
 	// See if user can super long jump?
@@ -2761,6 +2889,8 @@ void PM_CheckFalling( void )
 		}
 		else if ( pmove->flFallVelocity > PLAYER_MAX_SAFE_FALL_SPEED )
 		{
+			IcPainSound();
+
 			// NOTE:  In the original game dll , there were no breaks after these cases, causing the first one to 
 			// cascade into the second
 			//switch ( RandomLong(0,1) )
@@ -2769,7 +2899,7 @@ void PM_CheckFalling( void )
 				//pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
 				//break;
 			//case 1:
-				pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain3.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+				// pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain3.wav", 1, ATTN_NORM, 0, PITCH_NORM ); // (baAlex)
 			//	break;
 			//}
 			fvol = 1.0;
@@ -2794,12 +2924,12 @@ void PM_CheckFalling( void )
 		if ( fvol > 0.0 )
 		{
 			// Play landing step right away
-			pmove->flTimeStepSound = 0;
+			// pmove->flTimeStepSound = 0;
 			
-			PM_UpdateStepSound();
+			// PM_UpdateStepSound();
 			
 			// play step sound for current texture
-			PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), fvol );
+			// PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), fvol );
 
 			// Knock the screen around a little bit, temporary effect
 			pmove->punchangle[ 2 ] = pmove->flFallVelocity * 0.013;	// punch z axis
@@ -2808,6 +2938,8 @@ void PM_CheckFalling( void )
 			{
 				pmove->punchangle[ 0 ] = 8;
 			}
+
+			IcJumpLandSound();
 		}
 	}
 
@@ -2823,6 +2955,7 @@ PM_PlayWaterSounds
 
 =================
 */
+#if 0 // (baAlex)
 void PM_PlayWaterSounds( void )
 {
 	// Did we enter or leave water?
@@ -2846,6 +2979,7 @@ void PM_PlayWaterSounds( void )
 		}
 	}
 }
+#endif
 
 /*
 ===============
@@ -3090,7 +3224,8 @@ void PM_PlayerMove ( qboolean server )
 		}
 	}
 
-	PM_UpdateStepSound();
+	// PM_UpdateStepSound();
+	sWalkSound();
 
 	PM_Duck();
 	
@@ -3271,7 +3406,7 @@ void PM_PlayerMove ( qboolean server )
 		}
 
 		// Did we enter or leave the water?
-		PM_PlayWaterSounds();
+		// PM_PlayWaterSounds();
 		break;
 	}
 }

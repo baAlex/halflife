@@ -142,7 +142,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 			szbuffer[ CBTEXTURENAMEMAX - 1 ] = 0;
 				
 			// get texture type
-			chTextureType = PM_FindTextureType( szbuffer );	
+			// chTextureType = PM_FindTextureType( szbuffer );	
 		}
 	}
 	else
