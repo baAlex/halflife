@@ -646,31 +646,18 @@ static const char* s_wood_sound[4] = {"footsteps/wood-1.wav", "footsteps/wood-2.
 static const char* s_dirt_sound[4] = {"footsteps/dirt-1.wav", "footsteps/dirt-2.wav", "footsteps/dirt-3.wav", "footsteps/dirt-4.wav"};
 static const char* s_snow_sound[4] = {"footsteps/snow-1.wav", "footsteps/snow-2.wav", "footsteps/snow-3.wav", "footsteps/snow-4.wav"};
 
-static const char** s_sound[MAX_CLIENTS] =
-{
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-	s_concrete_sound, s_concrete_sound, s_concrete_sound, s_concrete_sound,
-};
-
 void IcPlayMaterialSound(float volume)
 {
+	const char** sound_set = s_concrete_sound;
 	const char* texture_name;
 
 	// Retrieve texture name
 	{
 		vec3_t start, end;
-		const float height = pmove->player_maxs[pmove->usehull][2] - pmove->player_mins[pmove->usehull][2];
-
 		VectorCopy(pmove->origin, start); // Valve copies them, so maybe they know
 		VectorCopy(pmove->origin, end);   // that trace function modifies its inputs
 
-		end[2] -= height;
+		end[2] -= 64.0f; // Magic number by Valve
 
 		texture_name = pmove->PM_TraceTexture(0, start, end);
 		// pmove->Con_Printf("### IcPlayMaterialSound(), '%s'\n", texture_name);
@@ -684,34 +671,34 @@ void IcPlayMaterialSound(float volume)
 		{
 			if (*c == '#')
 				break;
-			else if (*c == 'c')
-				s_sound[pmove->player_index] = s_concrete_sound;
+			// else if (*c == 'c')
+			// 	sound_set = s_concrete_sound;
 			else if (*c == 'm')
-				s_sound[pmove->player_index] = s_metal_sound;
+				sound_set = s_metal_sound;
 			else if (*c == 'w')
-				s_sound[pmove->player_index] = s_wood_sound;
+				sound_set = s_wood_sound;
 			else if (*c == 'd')
-				s_sound[pmove->player_index] = s_dirt_sound;
+				sound_set = s_dirt_sound;
 			else if (*c == 's')
-				s_sound[pmove->player_index] = s_snow_sound;
+				sound_set = s_snow_sound;
 		}
 	}
 	else
 	{
 		// PM_TraceTexture() traces only one point, not the entire bounding box,
 		// thus on thin edges no texture is found. If that happens, we simply
-		// play last sound set and pretend that all is right.
+		// play concrete sounds and pretend that all is right.
 	}
 
 	// Play sound
 	const int rand = pmove->RandomLong(0, 3);
-	pmove->PM_PlaySound(CHAN_BODY, s_sound[pmove->player_index][rand], volume, ATTN_NORM, 0, PITCH_NORM);
+	pmove->PM_PlaySound(CHAN_BODY, sound_set[rand], volume, ATTN_NORM, 0, PITCH_NORM);
 }
 
 
 void IcJumpLandSound()
 {
-	IcPlayMaterialSound(0.35f * 2.0f);
+	IcPlayMaterialSound(0.3f * 2.0f);
 }
 
 
@@ -755,7 +742,7 @@ void sWalkSound()
 	// pmove->Con_Printf("### sWalkSound()\n");
 
 	// Play footstep
-	IcPlayMaterialSound(0.35f * 1.0f);
+	IcPlayMaterialSound(0.3f * 1.0f);
 }
 
 
