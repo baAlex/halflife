@@ -104,7 +104,8 @@ class DevDashboard
 			         Ic::GetAccuracy(Ic::Side::Client), Ic::GetAccuracy(Ic::Side::Server));
 			sDrawText(s_margin, 100 + height * 7, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 
-			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Speed: %03.0f/%03.0f", Ic::GetSpeed(), Ic::PLAYER_MAX_SPEED);
+			snprintf(m_text_buffer, TEXT_BUFFER_LENGTH, "Speed: %03.0f/%03.0f\nAngle: %.2f deg", Ic::GetSpeed(),
+			         Ic::PLAYER_MAX_SPEED, Ic::GetAngle());
 			sDrawText(s_margin, 100 + height * 10, m_dev_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
 		}
 	}

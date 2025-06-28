@@ -16,6 +16,8 @@
 #ifndef IC_MESSAGES_HPP
 #define IC_MESSAGES_HPP
 
+#include "ic/vector.hpp"
+
 namespace Ic
 {
 
@@ -29,16 +31,28 @@ void MessagesInitialise();
 void MessagesSoftInitialise();
 void MessagesSetAccuracy(Side, float a);
 void MessagesSetSpeed(float s, float max_speed);
+void MessagesSetAngle(float a);
 
 bool GetIfDead();
 int GetHealth();
 float GetAccuracy(Side);
 float GetSpeed();
+float GetAngle();
 const char* GetWeaponMode();
 int GetChamberAmmo();
 int GetMagazineAmmo();
 const char* GetWeaponName();
 int GetDeveloperLevel();
+
+struct WorldProperties
+{
+	Vector3 fog_colour1;
+	Vector3 fog_colour2;
+	float fog_density;
+	float fog_angle;
+};
+
+const WorldProperties* GetWorldProperties();
 
 } // namespace Ic
 

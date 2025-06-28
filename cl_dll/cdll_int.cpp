@@ -57,6 +57,7 @@ extern "C"
 #include "ic/accuracy.hpp"
 #include "ic/game_constants.hpp"
 #include "ic/events.hpp"
+#include "ic/fog.hpp"
 
 
 static Ic::Accuracy s_client_side_accuracy;
@@ -201,6 +202,7 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	Ic::HudInitialise();
 	Ic::MessagesInitialise();
 	Ic::ViewInitialise();
+	Ic::FogInitialise();
 
 	s_client_side_accuracy.Initialise();
 
@@ -227,6 +229,7 @@ void CL_DLLEXPORT HUD_Init( void )
 	Ic::HudSoftInitialise();
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
+	Ic::FogInitialise();
 
 	s_client_side_accuracy.Initialise();
 }
@@ -292,6 +295,7 @@ void CL_DLLEXPORT HUD_Reset( void )
 	Ic::HudSoftInitialise();
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
+	Ic::FogInitialise();
 
 	s_client_side_accuracy.Initialise();
 }
@@ -333,7 +337,10 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 		pparams->simvel[1] * pparams->simvel[1]),
 		pparams->movevars->maxspeed);
 
+	Ic::MessagesSetAngle(pparams->viewangles[1]);
+
 	Ic::ViewUpdate(pparams);
+	Ic::FogDraw();
 }
 
 

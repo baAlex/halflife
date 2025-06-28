@@ -18,10 +18,13 @@
 #include "wrect.h"
 #include "cl_dll.h"
 #include "parsemsg.h"
+#include "com_model.h"
 
 #include "messages.hpp"
 #include "ic/base.hpp"
 #include "ic/weapons.hpp"
+
+#include <string.h>
 
 
 static int s_health;
@@ -33,6 +36,7 @@ static const Ic::ClosedBoltBehaviour::Properties* s_weapon_behaviour_props;
 static float s_accuracy[2];
 static float s_speed;
 static float s_max_speed;
+static float s_angle;
 
 static int s_developer_level;
 
@@ -115,6 +119,11 @@ void Ic::MessagesSetSpeed(float s, float max_speed)
 	s_max_speed = max_speed;
 }
 
+void Ic::MessagesSetAngle(float a)
+{
+	s_angle = a;
+}
+
 
 bool Ic::GetIfDead()
 {
@@ -134,6 +143,11 @@ float Ic::GetAccuracy(Side side)
 float Ic::GetSpeed()
 {
 	return s_speed;
+}
+
+float Ic::GetAngle()
+{
+	return s_angle;
 }
 
 const char* Ic::GetWeaponMode()
@@ -162,4 +176,144 @@ const char* Ic::GetWeaponName()
 int Ic::GetDeveloperLevel()
 {
 	return s_developer_level;
+}
+
+
+static char s_map_name[256];
+static Ic::WorldProperties s_world_p = {};
+
+const Ic::WorldProperties* Ic::GetWorldProperties()
+{
+	WorldProperties new_p = {};
+
+	if (strcmp(s_map_name, gEngfuncs.pfnGetLevelName()) == 0)
+		return &s_world_p;
+
+	strcpy(s_map_name, gEngfuncs.pfnGetLevelName());
+	memset(&s_world_p, 0, sizeof(WorldProperties));
+
+	// ----
+	// Mostly a copy of UTIL_FindEntityInMap(), 'cl_dll/hud_spectator.cpp'
+
+	// Btw, makes more sense to parse world at any of the Initialise() functions,
+	// however those are called before the level is actually loaded.
+
+	bool found = false;
+	char keyname[256];
+	char token[1024];
+
+	cl_entity_t* world_entity = gEngfuncs.GetEntityByIndex(0);
+	if (world_entity == nullptr)
+		return &s_world_p;
+
+	for (char* data = world_entity->model->entities; data != nullptr;)
+	{
+		data = gEngfuncs.COM_ParseFile(data, token);
+
+		if ((token[0] == '}') || (token[0] == 0))
+			break;
+
+		if (data == nullptr)
+		{
+			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
+			return &s_world_p;
+		}
+
+		if (token[0] != '{')
+		{
+			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), expected {\n");
+			return &s_world_p;
+		}
+
+		// Now parse entities properties
+		while (1)
+		{
+			// Key
+			data = gEngfuncs.COM_ParseFile(data, token);
+
+			if (token[0] == '}')
+				break; // Finish parsing this entity
+
+			if (data == nullptr)
+			{
+				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
+				return &s_world_p;
+			}
+
+			strcpy(keyname, token);
+
+			// Hack to fix keynames with trailing spaces
+			size_t n = strlen(keyname);
+			while (n != 0 && keyname[n - 1] == ' ')
+			{
+				keyname[n - 1] = 0;
+				n--;
+			}
+
+			// Parse values
+			data = gEngfuncs.COM_ParseFile(data, token);
+
+			if (data == nullptr)
+			{
+				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
+				return &s_world_p;
+			}
+
+			if (token[0] == '}')
+			{
+				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), closing brace without data");
+				return &s_world_p;
+			}
+
+			if (strcmp(keyname, "classname") == 0)
+			{
+				if (strcmp(token, "worldspawn") == 0)
+				{
+					found = true; // That's our entity
+				}
+			}
+
+			if (strcmp(keyname, "fog_colour1") == 0)
+			{
+				int temp[3] = {};
+				sscanf(token, "%i %i %i", &temp[0], &temp[1], &temp[2]);
+
+				new_p.fog_colour1[0] = static_cast<float>(temp[0]) / 255.0f;
+				new_p.fog_colour1[1] = static_cast<float>(temp[1]) / 255.0f;
+				new_p.fog_colour1[2] = static_cast<float>(temp[2]) / 255.0f;
+
+				gEngfuncs.Con_Printf("### fog_colour1 = '%s'\n", token);
+			}
+
+			if (strcmp(keyname, "fog_colour2") == 0)
+			{
+				int temp[3] = {};
+				sscanf(token, "%i %i %i", &temp[0], &temp[1], &temp[2]);
+
+				new_p.fog_colour2[0] = static_cast<float>(temp[0]) / 255.0f;
+				new_p.fog_colour2[1] = static_cast<float>(temp[1]) / 255.0f;
+				new_p.fog_colour2[2] = static_cast<float>(temp[2]) / 255.0f;
+
+				gEngfuncs.Con_Printf("### fog_colour2 = '%s'\n", token);
+			}
+
+			if (strcmp(keyname, "fog_density") == 0)
+			{
+				new_p.fog_density = static_cast<float>(atof(token));
+				gEngfuncs.Con_Printf("### fog_density = '%s'\n", token);
+			}
+
+			if (strcmp(keyname, "fog_angle") == 0)
+			{
+				new_p.fog_angle = static_cast<float>(atof(token));
+				gEngfuncs.Con_Printf("### fog_angle = '%s'\n", token);
+			}
+		}
+
+		if (found == true)
+		{
+			s_world_p = new_p;
+			return &s_world_p;
+		}
+	}
 }
