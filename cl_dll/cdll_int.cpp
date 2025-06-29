@@ -204,7 +204,7 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	Ic::MessagesInitialise();
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
-	Ic::ParticlesInitialise(gEngfuncs.GetClientTime());
+	Ic::ParticlesInitialise();
 
 	s_client_side_accuracy.Initialise();
 
@@ -232,7 +232,7 @@ void CL_DLLEXPORT HUD_Init( void )
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
-	Ic::ParticlesInitialise(gEngfuncs.GetClientTime());
+	Ic::ParticlesInitialise();
 
 	s_client_side_accuracy.Initialise();
 }
@@ -299,7 +299,7 @@ void CL_DLLEXPORT HUD_Reset( void )
 	Ic::MessagesSoftInitialise();
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
-	Ic::ParticlesInitialise(gEngfuncs.GetClientTime());
+	Ic::ParticlesInitialise();
 
 	s_client_side_accuracy.Initialise();
 }

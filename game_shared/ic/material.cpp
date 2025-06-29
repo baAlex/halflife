@@ -24,20 +24,72 @@ static const char* s_wood_sound[Ic::Material::VARIATIONS_NO] = {"impacts/wood-1.
                                                                 "impacts/wood-3.wav", "impacts/wood-4.wav"};
 
 
+static constexpr Ic::Vector4 GENERIC_IMPACT_COLOUR = {0.54f, 0.54f, 0.54f, 0.37f};
+
+
+static constexpr Ic::Material GENERIC_MATERIAL = {
+    Ic::Material::Type::Unknown, // Type
+    s_generic_decal,             // Decals
+    s_generic_sound,             // Impact sounds
+    GENERIC_IMPACT_COLOUR,       // Impact colour
+    6,                           // Impact particles number
+    -0.5f,                       // Impact particles gravity
+};
+
+static constexpr Ic::Material CONCRETE_MATERIAL = {
+    Ic::Material::Type::Concrete, // Type
+    s_generic_decal,              // Decals
+    s_generic_sound,              // Impact sounds
+    GENERIC_IMPACT_COLOUR,        // Impact colour
+    6,                            // Impact particles number
+    -0.5f,                        // Impact particles gravity
+};
+
+static constexpr Ic::Material METAL_MATERIAL = {
+    Ic::Material::Type::Metal,    // Type
+    s_generic_decal,              // Decals
+    s_metal_sound,                // Impact sounds
+    {0.18f, 0.18f, 0.12f, 0.12f}, // Impact colour
+    3,                            // Impact particles number
+    -0.5f,                        // Impact particles gravity
+};
+
+static constexpr Ic::Material WOOD_MATERIAL = {
+    Ic::Material::Type::Wood,     // Type
+    s_generic_decal,              // Decals
+    s_wood_sound,                 // Impact sounds
+    {0.59f, 0.45f, 0.29f, 0.37f}, // Impact colour
+    3,                            // Impact particles number
+    -4.0f,                        // Impact particles gravity
+};
+
+static constexpr Ic::Material DIRT_MATERIAL = {
+    Ic::Material::Type::Dirt,    // Type
+    s_generic_decal,             // Decals
+    s_generic_sound,             // Impact sounds
+    {0.61f, 0.58f, 0.47f, 0.5f}, // Impact colour
+    8,                           // Impact particles number
+    -1.0f,                       // Impact particles gravity
+};
+
+static constexpr Ic::Material SNOW_MATERIAL = {
+    Ic::Material::Type::Snow,  // Type
+    s_generic_decal,           // Decals
+    s_generic_sound,           // Impact sounds
+    {1.0f, 1.0f, 1.0f, 0.58f}, // Impact colour
+    8,                         // Impact particles number
+    -4.0f,                     // Impact particles gravity
+};
+
+
 Ic::Material Ic::GetMaterial(const char* texture_name)
 {
 	Material ret;
 	bool lad_found = false;
 	bool do_decals = true;
 
-	// Safe assumption
-	ret.type = Material::Type::Unknown;
-	ret.decals = s_generic_decal;
-	ret.impact_sounds = s_generic_sound;
-
-	// Parse
 	if (texture_name == nullptr)
-		return ret;
+		return GENERIC_MATERIAL;
 
 	for (const char* c = texture_name; c != 0x00 && c < texture_name + 3; c += 1) // Yes, up to 3 characters
 	{
@@ -47,35 +99,15 @@ Ic::Material Ic::GetMaterial(const char* texture_name)
 			break;
 		}
 		else if (*c == 'c')
-		{
-			ret.type = Material::Type::Concrete;
-			// ret.decals = s_generic_decal;
-			// ret.impact_sounds = s_generic_sound;
-		}
+			ret = CONCRETE_MATERIAL;
 		else if (*c == 'm')
-		{
-			ret.type = Material::Type::Metal;
-			// ret.decals = s_generic_decal;
-			ret.impact_sounds = s_metal_sound;
-		}
+			ret = METAL_MATERIAL;
 		else if (*c == 'w')
-		{
-			ret.type = Material::Type::Wood;
-			// ret.decals = s_generic_decal;
-			ret.impact_sounds = s_wood_sound;
-		}
+			ret = WOOD_MATERIAL;
 		else if (*c == 'd')
-		{
-			ret.type = Material::Type::Dirt;
-			// ret.decals = s_generic_decal;
-			// ret.impact_sounds = s_generic_sound;
-		}
+			ret = DIRT_MATERIAL;
 		else if (*c == 's')
-		{
-			ret.type = Material::Type::Snow;
-			// ret.decals = s_generic_decal;
-			// ret.impact_sounds = s_generic_sound;
-		}
+			ret = SNOW_MATERIAL;
 		else if (*c == 'x')
 			do_decals = false;
 	}
@@ -83,15 +115,7 @@ Ic::Material Ic::GetMaterial(const char* texture_name)
 	if (do_decals == false)
 		ret.decals = nullptr;
 
-	// Texture doesn't have our nomenclature, go
-	// back to safe assumption
-	if (lad_found == false)
-	{
-		ret.type = Material::Type::Unknown;
-		ret.decals = s_generic_decal;
-		ret.impact_sounds = s_generic_sound;
-	}
-
 	// Bye!
-	return ret;
+	// (return generic if texture did't had our nomenclature)
+	return (lad_found == false) ? GENERIC_MATERIAL : ret;
 }

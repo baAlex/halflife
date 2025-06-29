@@ -17,7 +17,6 @@
 
 
 #include "ic/particles.hpp"
-#include "ic/base.hpp"
 
 
 #include "particleman.h"
@@ -309,45 +308,11 @@ HUD_CreateEntities
 Gives us a chance to add additional entities to the render this frame
 =========================
 */
-
-static cl_entity_t s_dust_particles_entities[Ic::MAX_PARTICLES] = {};
-static HSPRITE s_dust_sprite;
-
 void CL_DLLEXPORT HUD_CreateEntities( void )
 {
 //	RecClCreateEntities();
 
-	// (baAlex)
-	{
-		s_dust_sprite = gEngfuncs.pfnSPR_Load("sprites/dust.spr");
-		model_s* sprite_as_model = (model_s*)(gEngfuncs.GetSpritePointer(s_dust_sprite)); // Nasty 'const' conversion
-
-		const Ic::Particle* particles = Ic::DustParticlesUpdate(gEngfuncs.GetClientTime());
-		for (const Ic::Particle* p = particles; p < particles + Ic::MAX_PARTICLES; p += 1)
-		{
-			if (p->life <= 0.0f)
-				continue;
-
-			const int index = static_cast<int>(p - particles);
-			cl_entity_s* ent = s_dust_particles_entities + index;
-
-			ent->index = index + 123;     // It cannot be zero, and that 123 is an offset for... just
-			ent->model = sprite_as_model; // in case, not override Bench_AddObjects(), Game_AddObjects()
-			                              // and GetClientVoiceMgr(), objects
-
-			ent->curstate.rendermode = kRenderTransAlpha; // Only mode that more or less works in Software and OpenGL
-			ent->curstate.renderamt = static_cast<int>(p->life * (1.0f / Ic::DUST_PARTICLES_LIFE) * static_cast<float>(p->colour[3])); // Only works in OpenGL
-			ent->curstate.rendercolor.r = p->colour[0];
-			ent->curstate.rendercolor.g = p->colour[1];
-			ent->curstate.rendercolor.b = p->colour[2];
-			
-			ent->origin[0] = p->position.x;
-			ent->origin[1] = p->position.y;
-			ent->origin[2] = p->position.z;
-			
-			gEngfuncs.CL_CreateVisibleEntity(ET_TEMPENTITY, ent);
-		}
-	}
+	Ic::ParticlesEntities();
 
 #if defined( BEAM_TEST )
 	Beams();

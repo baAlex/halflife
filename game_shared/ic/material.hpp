@@ -13,6 +13,8 @@ defined by the Mozilla Public License, v. 2.0.
 #ifndef IC_MATERIAL_HPP
 #define IC_MATERIAL_HPP
 
+#include "vector.hpp"
+
 namespace Ic
 {
 
@@ -20,7 +22,7 @@ struct Material
 {
 	enum class Type
 	{
-		Unknown,
+		Unknown = 0,
 		Concrete,
 		Metal,
 		Wood,
@@ -33,6 +35,10 @@ struct Material
 	Type type;
 	const char** decals; // Can be null
 	const char** impact_sounds;
+
+	Vector4 impact_colour;
+	int impact_particles_number;
+	float impact_particles_gravity;
 };
 
 Material GetMaterial(const char* texture_name);
