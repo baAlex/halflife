@@ -1994,6 +1994,21 @@ void CBasePlayer::PreThink(void)
 		return;
 	}
 
+	// (baAlex)
+	{
+		// Light probe
+		TraceResult tr;
+		UTIL_MakeVectors(pev->v_angle);
+		UTIL_TraceLine(pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 8192, ignore_monsters, ENT(pev), &tr);
+
+		vec3_t temp;
+		temp.x = tr.vecEndPos.x + tr.vecPlaneNormal.x * 16.0f;
+		temp.y = tr.vecEndPos.y + tr.vecPlaneNormal.y * 16.0f;
+		temp.z = tr.vecEndPos.z + tr.vecPlaneNormal.z * 16.0f;
+
+		m_light_probe->Update(temp);
+	}
+
 	// So the correct flags get sent to client asap.
 	//
 	if ( m_afPhysicsFlags & PFLAG_ONTRAIN )
@@ -2694,6 +2709,22 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 }
 
 
+void LightProbe::Spawn(entvars_t* owner)
+{
+	SET_MODEL(ENT(pev), "models/null.mdl");
+}
+
+int LightProbe::GetLight()
+{
+	return g_engfuncs.pfnGetEntityIllum(ENT(pev));
+}
+
+void LightProbe::Update(vec3_t pos)
+{
+	UTIL_SetOrigin(pev, pos);
+}
+
+
 void CBasePlayer::PostThink()
 {
 	if ( g_fGameOver )
@@ -2749,13 +2780,16 @@ void CBasePlayer::PostThink()
 			{
 				const auto p = m_current_weapon->GetWeaponProperties();
 
+				// g_engfuncs.pfnAlertMessage(at_console, "%i\n", m_light_probe->GetLight());
+
 				// Effects
 				// (TODO, check how FEV_NOTHOST interacts with 'cl_lw')
 				uint16_t seed = m_weapons_rng >> 1; // pfnPlaybackEvent() clamps at 15 bits
 				// g_engfuncs.pfnAlertMessage(at_console, "%u\n", seed);
 
 				g_engfuncs.pfnPlaybackEvent(0, edict(), g_engfuncs.pfnPrecacheEvent(1, p->event_fire), 0.0f,
-				                            (float *)(&g_vecZero), (float *)(&g_vecZero), m_accuracy.Get(), 0.0f,
+				                            (float *)(&g_vecZero), (float *)(&g_vecZero), m_accuracy.Get(),
+				                            static_cast<float>(Ic::Min(255, m_light_probe->GetLight())),
 				                            state.rounds_fired, static_cast<int>(seed), 0, 0);
 
 				Ic::Xorshift16(&m_weapons_rng); // TODO, I should mimic what clien does
@@ -3162,6 +3196,9 @@ void CBasePlayer::Spawn( void )
 		m_rifle.Initialise();
 
 		m_weapons_rng = 123;
+
+		m_light_probe = GetClassPtr((LightProbe*)NULL);
+		m_light_probe->Spawn(pev);
 	}
 
 	g_pGameRules->PlayerSpawn( this );

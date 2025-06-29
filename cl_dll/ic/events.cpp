@@ -33,6 +33,7 @@
 #include "ic/particles.hpp"
 
 #include <string.h>
+#include <stdint.h>
 
 
 static float sEasing(float x)
@@ -44,7 +45,7 @@ static float sEasing(float x)
 
 template <typename W>
 static void sImpact(float* normal, int impacted_entity_index, int impacted_model, const float* start,
-                    const float* trace_end, const char* texture_name)
+                    const float* trace_end, const char* texture_name, uint8_t light_at_impact)
 {
 	float* start_pos = (float*)start; // Disgusting const* casts, Valve please fix
 	float* end_pos = (float*)trace_end;
@@ -68,30 +69,52 @@ static void sImpact(float* normal, int impacted_entity_index, int impacted_model
 		normal2.y = normal[1] * 256.0f;
 		normal2.z = normal[2] * 256.0f;
 
+		uint8_t colour[4];
+
 		switch (mat.type)
 		{
 		case Ic::Material::Type::Metal:
+			colour[0] = 48;
+			colour[1] = 48;
+			colour[2] = 32;
 			Ic::DustParticles(3 / Ic::Min(W::PROPS.pellets_no, 3), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -0.5f,
-			                  48, 48, 48, 32);
+			                  (colour[0] * light_at_impact) >> 8, (colour[1] * light_at_impact) >> 8,
+			                  (colour[2] * light_at_impact) >> 8, 32);
 			break;
 		case Ic::Material::Type::Wood:
+			colour[0] = 152;
+			colour[1] = 109;
+			colour[2] = 75;
 			Ic::DustParticles(3 / Ic::Min(W::PROPS.pellets_no, 3), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -4.0f,
-			                  152, 109, 75, 96);
+			                  (colour[0] * light_at_impact) >> 8, (colour[1] * light_at_impact) >> 8,
+			                  (colour[2] * light_at_impact) >> 8, 96);
 			break;
 		case Ic::Material::Type::Snow:
+			colour[0] = 255;
+			colour[1] = 255;
+			colour[2] = 255;
 			Ic::DustParticles(8 / Ic::Min(W::PROPS.pellets_no, 8), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -4.0f,
-			                  255, 255, 255, 150);
+			                  (colour[0] * light_at_impact) >> 8, (colour[1] * light_at_impact) >> 8,
+			                  (colour[2] * light_at_impact) >> 8, 150);
 			break;
 		case Ic::Material::Type::Dirt:
+			colour[0] = 158;
+			colour[1] = 150;
+			colour[2] = 122;
 			Ic::DustParticles(8 / Ic::Min(W::PROPS.pellets_no, 8), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -1.0f,
-			                  158, 150, 122, 128);
+			                  (colour[0] * light_at_impact) >> 8, (colour[1] * light_at_impact) >> 8,
+			                  (colour[2] * light_at_impact) >> 8, 128);
 			break;
 
 		// case Ic::Material::Type::Unknown:
 		// case Ic::Material::Type::Concrete:
 		default:
+			colour[0] = 140;
+			colour[1] = 140;
+			colour[2] = 140;
 			Ic::DustParticles(6 / Ic::Min(W::PROPS.pellets_no, 6), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -0.5f,
-			                  140, 140, 140, 95);
+			                  (colour[0] * light_at_impact) >> 8, (colour[1] * light_at_impact) >> 8,
+			                  (colour[2] * light_at_impact) >> 8, 95);
 			break;
 		}
 	}
@@ -144,7 +167,7 @@ static float sClientSideOrigin(int entity, const float* server_origin, bool serv
 
 template <typename W>
 static void sGenericEvent(int entity, float* origin, float* angles, bool crouch, float accuracy, int rounds_no,
-                          int seed)
+                          int seed, uint8_t light_at_impact)
 {
 	const int dev_sprite = gEngfuncs.pEventAPI->EV_FindModelIndex("sprites/smoke.spr");
 	float dev_colour[3];
@@ -233,7 +256,7 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 				// gEngfuncs.Con_Printf("#### IcEventX(), '%s'\n", texture_name);
 
 				sImpact<W>(tr.plane.normal, tr.ent, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), origin, tr.endpos,
-				           texture_name);
+				           texture_name, light_at_impact);
 
 				// Render a line (for debuging purposes)
 				if (Ic::GetDeveloperLevel() > 1)
@@ -287,31 +310,31 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 void IcEventWeapon1(struct event_args_s* args)
 {
 	sGenericEvent<Ic::PistolWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                                args->iparam1, args->iparam2);
+	                                args->iparam1, args->iparam2, static_cast<uint8_t>(args->fparam2));
 }
 
 void IcEventWeapon2(struct event_args_s* args)
 {
 	sGenericEvent<Ic::ShotgunWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                                 args->iparam1, args->iparam2);
+	                                 args->iparam1, args->iparam2, static_cast<uint8_t>(args->fparam2));
 }
 
 void IcEventWeapon3(struct event_args_s* args)
 {
 	sGenericEvent<Ic::SmgWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                             args->iparam1, args->iparam2);
+	                             args->iparam1, args->iparam2, static_cast<uint8_t>(args->fparam2));
 }
 
 void IcEventWeapon4(struct event_args_s* args)
 {
 	sGenericEvent<Ic::ArWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1, args->iparam1,
-	                            args->iparam2);
+	                            args->iparam2, static_cast<uint8_t>(args->fparam2));
 }
 
 void IcEventWeapon5(struct event_args_s* args)
 {
 	sGenericEvent<Ic::RifleWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                               args->iparam1, args->iparam2);
+	                               args->iparam1, args->iparam2, static_cast<uint8_t>(args->fparam2));
 }
 
 

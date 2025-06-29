@@ -963,6 +963,8 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("footsteps/snow-4.wav");
 
 	PRECACHE_SOUND("player/fall.wav");
+
+	PRECACHE_MODEL("models/null.mdl");
 }
 
 /*

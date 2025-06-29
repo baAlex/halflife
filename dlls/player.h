@@ -90,6 +90,18 @@ enum sbar_data
 
 #define CHAT_INTERVAL 1.0f
 
+
+class LightProbe : public CBaseEntity
+{
+public:
+	void Spawn(entvars_t* owner);
+	void Update(vec3_t pos);
+	int GetLight();
+
+	virtual int ObjectCaps(void) { return FCAP_DONT_SAVE; }
+};
+
+
 class CBasePlayer : public CBaseMonster
 {
 public:
@@ -346,6 +358,8 @@ public:
 	Ic::RifleWeapon m_rifle;
 
 	uint16_t m_weapons_rng;
+
+	LightProbe* m_light_probe;
 	// </ (baAlex) >
 };
 
