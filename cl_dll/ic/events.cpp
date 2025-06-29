@@ -30,6 +30,7 @@
 #include "ic/base.hpp"
 #include "ic/messages.hpp"
 #include "ic/material.hpp"
+#include "ic/particles.hpp"
 
 #include <string.h>
 
@@ -42,10 +43,10 @@ static float sEasing(float x)
 
 
 template <typename W>
-static void sImpact(int impacted_entity_index, int impacted_model, const float* start, const float* trace_end,
-                    const char* texture_name)
+static void sImpact(float* normal, int impacted_entity_index, int impacted_model, const float* start,
+                    const float* trace_end, const char* texture_name)
 {
-	float* start_pos = (float*)start; // Disgusting char* casts, Valve please fix
+	float* start_pos = (float*)start; // Disgusting const* casts, Valve please fix
 	float* end_pos = (float*)trace_end;
 
 	const physent_s* entity = gEngfuncs.pEventAPI->EV_GetPhysent(impacted_entity_index);
@@ -58,11 +59,44 @@ static void sImpact(int impacted_entity_index, int impacted_model, const float* 
 		return;
 
 	// Particles
-	gEngfuncs.pEfxAPI->R_BulletImpactParticles(end_pos);
-
-	// Sound
 	const Ic::Material mat = Ic::GetMaterial(texture_name);
 
+	{
+		// gEngfuncs.pEfxAPI->R_BulletImpactParticles(end_pos);
+		Ic::Vector3 normal2;
+		normal2.x = normal[0] * 256.0f;
+		normal2.y = normal[1] * 256.0f;
+		normal2.z = normal[2] * 256.0f;
+
+		switch (mat.type)
+		{
+		case Ic::Material::Type::Metal:
+			Ic::DustParticles(3 / Ic::Min(W::PROPS.pellets_no, 3), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -0.5f,
+			                  48, 48, 48, 32);
+			break;
+		case Ic::Material::Type::Wood:
+			Ic::DustParticles(3 / Ic::Min(W::PROPS.pellets_no, 3), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -4.0f,
+			                  152, 109, 75, 96);
+			break;
+		case Ic::Material::Type::Snow:
+			Ic::DustParticles(8 / Ic::Min(W::PROPS.pellets_no, 8), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -4.0f,
+			                  255, 255, 255, 150);
+			break;
+		case Ic::Material::Type::Dirt:
+			Ic::DustParticles(8 / Ic::Min(W::PROPS.pellets_no, 8), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -1.0f,
+			                  158, 150, 122, 128);
+			break;
+
+		// case Ic::Material::Type::Unknown:
+		// case Ic::Material::Type::Concrete:
+		default:
+			Ic::DustParticles(6 / Ic::Min(W::PROPS.pellets_no, 6), {end_pos[0], end_pos[1], end_pos[2]}, normal2, -0.5f,
+			                  140, 140, 140, 95);
+			break;
+		}
+	}
+
+	// Sound
 	const int rand1 = gEngfuncs.pfnRandomLong(0, Ic::Material::VARIATIONS_NO - 1);
 	const int rand2 = gEngfuncs.pfnRandomLong(0, Ic::Material::VARIATIONS_NO - 1);
 
@@ -198,7 +232,8 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 				const char* texture_name = gEngfuncs.pEventAPI->EV_TraceTexture(tr.ent, temp, end);
 				// gEngfuncs.Con_Printf("#### IcEventX(), '%s'\n", texture_name);
 
-				sImpact<W>(tr.ent, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), origin, tr.endpos, texture_name);
+				sImpact<W>(tr.plane.normal, tr.ent, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), origin, tr.endpos,
+				           texture_name);
 
 				// Render a line (for debuging purposes)
 				if (Ic::GetDeveloperLevel() > 1)
