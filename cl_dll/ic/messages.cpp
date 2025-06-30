@@ -27,6 +27,8 @@
 #include <string.h>
 
 
+static int s_world_updated = 0;
+
 static int s_health;
 
 static Ic::WeaponState s_weapon_state;
@@ -36,7 +38,7 @@ static const Ic::ClosedBoltBehaviour::Properties* s_weapon_behaviour_props;
 static float s_accuracy[2];
 static float s_speed;
 static float s_max_speed;
-static float s_angle;
+static Ic::Vector3 s_forward;
 
 static int s_developer_level;
 
@@ -103,6 +105,8 @@ void Ic::MessagesInitialise()
 
 void Ic::MessagesSoftInitialise()
 {
+	s_world_updated = 0;
+
 	s_health = 0.0f;
 	s_accuracy[0] = 0.0f;
 	s_accuracy[1] = 0.0f;
@@ -119,9 +123,9 @@ void Ic::MessagesSetSpeed(float s, float max_speed)
 	s_max_speed = max_speed;
 }
 
-void Ic::MessagesSetAngle(float a)
+void Ic::MessagesSetForward(Vector3 v)
 {
-	s_angle = a;
+	s_forward = v; // TODO, maybe, some day, this needs to be normalized
 }
 
 
@@ -145,9 +149,9 @@ float Ic::GetSpeed()
 	return s_speed;
 }
 
-float Ic::GetAngle()
+Ic::Vector3 Ic::GetForward()
 {
-	return s_angle;
+	return s_forward;
 }
 
 const char* Ic::GetWeaponMode()
@@ -179,18 +183,20 @@ int Ic::GetDeveloperLevel()
 }
 
 
-static char s_map_name[256];
 static Ic::WorldProperties s_world_p = {};
 
 const Ic::WorldProperties* Ic::GetWorldProperties()
 {
-	WorldProperties new_p = {};
+	return &s_world_p;
+}
 
-	if (strcmp(s_map_name, gEngfuncs.pfnGetLevelName()) == 0)
-		return &s_world_p;
+const void Ic::ParseWorldProperties()
+{
+	if (s_world_updated == 1)
+		return;
+	s_world_updated = 1;
 
-	strcpy(s_map_name, gEngfuncs.pfnGetLevelName());
-	memset(&s_world_p, 0, sizeof(WorldProperties));
+	gEngfuncs.Con_Printf("### Ic::ParseWorldProperties()\n");
 
 	// ----
 	// Mostly a copy of UTIL_FindEntityInMap(), 'cl_dll/hud_spectator.cpp'
@@ -202,9 +208,11 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 	char keyname[256];
 	char token[1024];
 
+	WorldProperties new_p = {};
+
 	cl_entity_t* world_entity = gEngfuncs.GetEntityByIndex(0);
 	if (world_entity == nullptr)
-		return &s_world_p;
+		return;
 
 	for (char* data = world_entity->model->entities; data != nullptr;)
 	{
@@ -216,13 +224,13 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 		if (data == nullptr)
 		{
 			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-			return &s_world_p;
+			return;
 		}
 
 		if (token[0] != '{')
 		{
 			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), expected {\n");
-			return &s_world_p;
+			return;
 		}
 
 		// Now parse entities properties
@@ -237,7 +245,7 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 			if (data == nullptr)
 			{
 				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-				return &s_world_p;
+				return;
 			}
 
 			strcpy(keyname, token);
@@ -256,13 +264,13 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 			if (data == nullptr)
 			{
 				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-				return &s_world_p;
+				return;
 			}
 
 			if (token[0] == '}')
 			{
 				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), closing brace without data");
-				return &s_world_p;
+				return;
 			}
 
 			if (strcmp(keyname, "classname") == 0)
@@ -313,7 +321,7 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 		if (found == true)
 		{
 			s_world_p = new_p;
-			return &s_world_p;
+			return;
 		}
 	}
 }

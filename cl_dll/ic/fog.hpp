@@ -16,11 +16,15 @@
 #ifndef IC_FOG_HPP
 #define IC_FOG_HPP
 
+#include "ic/vector.hpp"
+
 namespace Ic
 {
 
 void FogInitialise();
 void FogDraw();
+
+void SoftwareFog(Ic::Vector3 camera, Ic::Vector3 point, Ic::Vector4* out_colour, float* out_mix);
 
 } // namespace Ic
 

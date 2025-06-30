@@ -330,6 +330,8 @@ V_CalcRefdef
 */
 void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 {
+	Ic::ParseWorldProperties();
+
 	s_client_side_accuracy.Sample({pparams->simorg[0], pparams->simorg[1]},
 		{pparams->cl_viewangles[0], pparams->cl_viewangles[1]},
 		pparams->cmd->buttons & IN_DUCK, (pparams->onground == 0) ? 1 : 0,
@@ -341,7 +343,7 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 		pparams->simvel[1] * pparams->simvel[1]),
 		pparams->movevars->maxspeed);
 
-	Ic::MessagesSetAngle(pparams->viewangles[1]);
+	Ic::MessagesSetForward({pparams->forward[0], pparams->forward[1], pparams->forward[2]});
 
 	Ic::ViewUpdate(pparams);
 	Ic::FogDraw();

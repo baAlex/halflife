@@ -31,13 +31,13 @@ void MessagesInitialise();
 void MessagesSoftInitialise();
 void MessagesSetAccuracy(Side, float a);
 void MessagesSetSpeed(float s, float max_speed);
-void MessagesSetAngle(float a);
+void MessagesSetForward(Vector3 f);
 
 bool GetIfDead();
 int GetHealth();
 float GetAccuracy(Side);
 float GetSpeed();
-float GetAngle();
+Vector3 GetForward();
 const char* GetWeaponMode();
 int GetChamberAmmo();
 int GetMagazineAmmo();
@@ -53,6 +53,7 @@ struct WorldProperties
 };
 
 const WorldProperties* GetWorldProperties();
+const void ParseWorldProperties();
 
 } // namespace Ic
 

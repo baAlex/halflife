@@ -115,6 +115,40 @@ void Ic::FogInitialise()
 }
 
 
+static Ic::Vector3 s_colour = {1.0f, 0.0f, 0.0f};
+static float s_density = 1.0f / 500.0f;
+
+void Ic::SoftwareFog(Ic::Vector3 camera, Ic::Vector3 point, Ic::Vector4* out_colour, float* out_mix)
+{
+	// It's 2025 and I'm here emulating OpenGl's fixed pipeline from the 90s...
+	// credits to ChatGPT for this 'Vector scalar projection' trick, yeah really.
+
+	// As Wikipedia, the trick comes from:
+	// «The scalar projection is a scalar, equal to the *length* of the *orthogonal* projection of A on B,
+	//  with a negative sign if the projection has an opposite direction with respect to B.»
+	// (https://en.wikipedia.org/wiki/Scalar_projection) (emphasis mine)
+
+	// Here my human interpretation:
+
+	// Basically old OpenGl calculates fog density from Z component, *after* world-to-screen matrices
+	// multiplications on vertices. As such, fog is a weird screen/planar/orthogonal distance/length
+	// thing (what other terms should I add?, lol), between vertices and the near plane.
+
+	// How Dot() trick works, I have no idea (...kinda, the diagram in Wikipedia is quite good).
+	// Important tho is that a distance/length of the screen/planar/orthogonal kind, is exactly what is
+	// needed to emulate OpenGl's old fog. And I'm glad the AI told me about yet another use of Dot().
+
+	const float length = fabsf(Dot(Subtract(point, camera), GetForward()));
+	const float mix = Clamp(expf(-powf(s_density * length, 2.0f)), 0.0f, 1.0f);
+
+	out_colour->x = s_colour.x;
+	out_colour->y = s_colour.y;
+	out_colour->z = s_colour.z;
+	out_colour->w = 1.0f;
+	*out_mix = mix;
+}
+
+
 void Ic::FogDraw()
 {
 	const float s = 0.01f;  // Start and end doesn't affect EXP2 mode, which in
@@ -126,29 +160,28 @@ void Ic::FogDraw()
 	if (s_fog_available == 0)
 		return;
 
-	Vector3 colour;
-	float density;
 	{
 		const WorldProperties* p = GetWorldProperties();
 
-		const float diff = (fabsf(AnglesDifference(GetAngle(), p->fog_angle)) / 180.0f);
-		colour = Mix(p->fog_colour2, p->fog_colour1, diff);
+		const float view_angle = RadToDeg(atan2f(GetForward().y, GetForward().x));
+		const float diff = (fabsf(AnglesDifference(view_angle, p->fog_angle)) / 180.0f);
+		s_colour = Mix(p->fog_colour2, p->fog_colour1, diff);
 
-		// gEngfuncs.Con_Printf("%.2f -> %.2f\n", AnglesDifference(GetAngle(), p->fog_angle), diff);
+		// gEngfuncs.Con_Printf("%.2f -> %.2f\n", AnglesDifference(view_angle, p->fog_angle), diff);
 
 		if (p->fog_density != 0.0f)
-			density = 1.0f / p->fog_density;
+			s_density = 1.0f / p->fog_density;
 		else
-			density = 0.0f;
+			s_density = 0.0f;
 	}
 
 	glad_glEnable(GL_FOG);
-	glad_glFogfv(GL_FOG_COLOR, &colour.x);
+	glad_glFogfv(GL_FOG_COLOR, &s_colour.x);
 	glad_glFogi(GL_FOG_MODE, GL_EXP2);
-	glad_glFogf(GL_FOG_DENSITY, density);
+	glad_glFogf(GL_FOG_DENSITY, s_density);
 	glad_glFogf(GL_FOG_START, s);
 	glad_glFogf(GL_FOG_END, e);
 
-	gEngfuncs.pTriAPI->FogParams(density, 0);
-	gEngfuncs.pTriAPI->Fog(&colour.x, s, e, 1);
+	gEngfuncs.pTriAPI->FogParams(s_density, 0);
+	gEngfuncs.pTriAPI->Fog(&s_colour.x, s, e, 1);
 }

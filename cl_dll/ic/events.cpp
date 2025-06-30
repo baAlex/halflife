@@ -21,6 +21,7 @@
 #include "event_api.h"
 #include "event_args.h"
 #include "eventscripts.h"
+#include "r_studioint.h"
 
 #include "pm_defs.h"
 #include "pmtrace.h"
@@ -31,9 +32,13 @@
 #include "ic/messages.hpp"
 #include "ic/material.hpp"
 #include "ic/particles.hpp"
+#include "ic/fog.hpp"
 
 #include <string.h>
 #include <stdint.h>
+
+
+extern engine_studio_api_t IEngineStudio; // Global a la' Valve
 
 
 static float sEasing(float x)
@@ -63,13 +68,30 @@ static void sImpact(float* impact_normal, int impacted_entity_index, int impacte
 	const Ic::Material mat = Ic::GetMaterial(texture_name);
 
 	{
-		const int number = mat.impact_particles_number / Ic::Min(W::PROPS.pellets_no, mat.impact_particles_number);
+		int number = mat.impact_particles_number / Ic::Min(W::PROPS.pellets_no, mat.impact_particles_number);
 		const Ic::Vector3 position = {end_pos[0], end_pos[1], end_pos[2]};
 		const Ic::Vector3 force = {impact_normal[0] * 256.0f, impact_normal[1] * 256.0f, impact_normal[2] * 256.0f};
+
 		const Ic::Vector4 colour =
 		    Ic::Multiply(mat.impact_colour, {light_at_impact, light_at_impact, light_at_impact, 1.0f});
 
-		Ic::DustParticles(number, position, force, mat.impact_particles_gravity, colour);
+		Ic::Vector4 fog_colour;
+		float fog_mix;
+		Ic::SoftwareFog({start[0], start[1], start[2]}, {trace_end[0], trace_end[1], trace_end[2]}, &fog_colour,
+		                &fog_mix);
+		fog_colour[3] = colour[3];
+
+		if (IEngineStudio.IsHardware() != 0)
+		{
+			Ic::DustParticles(number, position, force, mat.impact_particles_gravity,
+			                  Ic::Mix(fog_colour, colour, fog_mix));
+		}
+		else
+		{
+			if (number > 1)
+				number >>= 1;
+			Ic::DustParticles(number, position, force, mat.impact_particles_gravity, colour);
+		}
 	}
 
 	// Sound
