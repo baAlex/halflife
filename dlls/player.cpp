@@ -2709,7 +2709,7 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 }
 
 
-void LightProbe::Spawn(entvars_t* owner)
+void LightProbe::Spawn()
 {
 	SET_MODEL(ENT(pev), "models/null.mdl");
 }
@@ -3198,7 +3198,7 @@ void CBasePlayer::Spawn( void )
 		m_weapons_rng = 123;
 
 		m_light_probe = GetClassPtr((LightProbe*)NULL);
-		m_light_probe->Spawn(pev);
+		m_light_probe->Spawn();
 	}
 
 	g_pGameRules->PlayerSpawn( this );
@@ -3319,6 +3319,9 @@ int CBasePlayer::Restore( CRestore &restore )
 	}
 
 	RenewItems();
+
+	m_light_probe = GetClassPtr((LightProbe*)NULL); // (baAlex)
+	m_light_probe->Spawn();
 
 	//Resync ammo data so you can reload - Solokiller
 	TabulateAmmo();
@@ -3677,7 +3680,7 @@ void CBasePlayer :: FlashlightTurnOn( void )
 		return;
 	}
 
-	if ( (pev->weapons & (1<<WEAPON_SUIT)) )
+	// if ( (pev->weapons & (1<<WEAPON_SUIT)) )
 	{
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
 		SetBits(pev->effects, EF_DIMLIGHT);

@@ -94,7 +94,7 @@ enum sbar_data
 class LightProbe : public CBaseEntity
 {
 public:
-	void Spawn(entvars_t* owner);
+	void Spawn();
 	void Update(vec3_t pos);
 	int GetLight();
 
