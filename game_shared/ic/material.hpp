@@ -28,20 +28,23 @@ struct Material
 		Wood,
 		Dirt,
 		Snow,
+		Flesh,
 	};
 
 	static constexpr int VARIATIONS_NO = 4;
 
 	Type type;
-	const char** decals; // Can be null
+	const char** decals;
 	const char** impact_sounds;
 
 	Vector4 impact_colour;
 	int impact_particles_number;
+	float impact_particles_force;
 	float impact_particles_gravity;
 };
 
-Material GetMaterial(const char* texture_name);
+const Material* GetMaterial(const char* texture_name, bool* do_decals);
+const Material* GetMaterial(Material::Type type);
 
 } // namespace Ic
 

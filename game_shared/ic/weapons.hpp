@@ -192,7 +192,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	static constexpr ClosedBoltBehaviour::Properties BEHAVIOUR_PROPS = {
 	    60.0 / 350.0, // Bolt travel duration
 	    7,            // Magazine size
-	    0.5,          // Cock duration
+	    0.75,         // Cock duration
 	};
 
 	static constexpr WeaponProperties PROPS = {
@@ -201,10 +201,10 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    2,                                                            // Modes number
 	    {WeaponMode::Semi, WeaponMode::Manual},                       // Modes
 	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size - 1), // Accuracy force
-	    2.0f / 2.0f,                                                  // Accuracy decay
-	    3000.0f,                                                      // Spread
+	    2.0f / 1.75f,                                                 // Accuracy decay
+	    3200.0f,                                                      // Spread
 	    12,                                                           // Pellets
-	    256.0f,                                                       // Pellets dispersion
+	    350.0f,                                                       // Pellets dispersion
 	    "events/shotgun-fire.sc",                                     // Fire event
 	    "weapons/shotgun-fire.wav",                                   // Fire sound
 	};
@@ -280,8 +280,8 @@ class ArWeapon final : public GeneralizedWeapon
 	    2,                                                            // Modes number
 	    {WeaponMode::Automatic, WeaponMode::Semi},                    // Modes
 	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
-	    2.0f / 1.25f,                                                 // Accuracy decay
-	    2048.0f,                                                      // Spread
+	    2.0f / 0.5f,                                                  // Accuracy decay
+	    3000.0f,                                                      // Spread
 	    1,                                                            // Pellets
 	    0.0f,                                                         // Pellets dispersion
 	    "events/ar-fire.sc",                                          // Fire event
@@ -320,7 +320,7 @@ class RifleWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Manual},                                     // Modes
 	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size), // Accuracy force
 	    2.0f / 1.25f,                                             // Accuracy decay
-	    1000.0f,                                                  // Spread
+	    250.0f,                                                   // Spread
 	    1,                                                        // Pellets
 	    0.0f,                                                     // Pellets dispersion
 	    "events/rifle-fire.sc",                                   // Fire event

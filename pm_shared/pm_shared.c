@@ -645,6 +645,7 @@ static const char* s_metal_sound[4] = {"footsteps/metal-1.wav", "footsteps/metal
 static const char* s_wood_sound[4] = {"footsteps/wood-1.wav", "footsteps/wood-2.wav", "footsteps/wood-3.wav", "footsteps/wood-4.wav"};
 static const char* s_dirt_sound[4] = {"footsteps/dirt-1.wav", "footsteps/dirt-2.wav", "footsteps/dirt-3.wav", "footsteps/dirt-4.wav"};
 static const char* s_snow_sound[4] = {"footsteps/snow-1.wav", "footsteps/snow-2.wav", "footsteps/snow-3.wav", "footsteps/snow-4.wav"};
+static const char* s_flesh_sound[4] = {"footsteps/mud-1.wav", "footsteps/mud-2.wav", "footsteps/mud-3.wav", "footsteps/mud-4.wav"};
 
 void IcPlayMaterialSound(float volume)
 {
@@ -681,6 +682,8 @@ void IcPlayMaterialSound(float volume)
 				sound_set = s_dirt_sound;
 			else if (*c == 's')
 				sound_set = s_snow_sound;
+			else if (*c == 'f')
+				sound_set = s_flesh_sound;
 		}
 	}
 	else

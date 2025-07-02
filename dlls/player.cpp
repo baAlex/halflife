@@ -1999,7 +1999,7 @@ void CBasePlayer::PreThink(void)
 		// Light probe
 		TraceResult tr;
 		UTIL_MakeVectors(pev->v_angle);
-		UTIL_TraceLine(pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 8192, ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine(pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 8192, dont_ignore_monsters, ENT(pev), &tr);
 
 		vec3_t temp;
 		temp.x = tr.vecEndPos.x + tr.vecPlaneNormal.x * 16.0f;

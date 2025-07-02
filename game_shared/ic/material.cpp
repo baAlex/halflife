@@ -23,6 +23,10 @@ static const char* s_metal_sound[Ic::Material::VARIATIONS_NO] = {"impacts/metal-
 static const char* s_wood_sound[Ic::Material::VARIATIONS_NO] = {"impacts/wood-1.wav", "impacts/wood-2.wav",
                                                                 "impacts/wood-3.wav", "impacts/wood-4.wav"};
 
+static const char* s_flesh_decal[Ic::Material::VARIATIONS_NO] = {"{bshot1", "{bshot2", "{bshot3", "{bshot4"};
+static const char* s_flesh_sound[Ic::Material::VARIATIONS_NO] = {"impacts/flesh-1.wav", "impacts/flesh-2.wav",
+                                                                 "impacts/flesh-3.wav", "impacts/flesh-4.wav"};
+
 
 static constexpr Ic::Vector4 GENERIC_IMPACT_COLOUR = {0.54f, 0.54f, 0.54f, 0.37f};
 
@@ -33,6 +37,7 @@ static constexpr Ic::Material GENERIC_MATERIAL = {
     s_generic_sound,             // Impact sounds
     GENERIC_IMPACT_COLOUR,       // Impact colour
     6,                           // Impact particles number
+    256.0f,                      // Impact particles force
     -0.5f,                       // Impact particles gravity
 };
 
@@ -42,6 +47,7 @@ static constexpr Ic::Material CONCRETE_MATERIAL = {
     s_generic_sound,              // Impact sounds
     GENERIC_IMPACT_COLOUR,        // Impact colour
     6,                            // Impact particles number
+    256.0f,                       // Impact particles force
     -0.5f,                        // Impact particles gravity
 };
 
@@ -51,6 +57,7 @@ static constexpr Ic::Material METAL_MATERIAL = {
     s_metal_sound,                // Impact sounds
     {0.18f, 0.18f, 0.12f, 0.12f}, // Impact colour
     3,                            // Impact particles number
+    256.0f,                       // Impact particles force
     -0.5f,                        // Impact particles gravity
 };
 
@@ -60,6 +67,7 @@ static constexpr Ic::Material WOOD_MATERIAL = {
     s_wood_sound,                 // Impact sounds
     {0.59f, 0.45f, 0.29f, 0.37f}, // Impact colour
     3,                            // Impact particles number
+    256.0f,                       // Impact particles force
     -4.0f,                        // Impact particles gravity
 };
 
@@ -69,6 +77,7 @@ static constexpr Ic::Material DIRT_MATERIAL = {
     s_generic_sound,             // Impact sounds
     {0.61f, 0.58f, 0.47f, 0.5f}, // Impact colour
     8,                           // Impact particles number
+    256.0f,                      // Impact particles force
     -1.0f,                       // Impact particles gravity
 };
 
@@ -78,19 +87,30 @@ static constexpr Ic::Material SNOW_MATERIAL = {
     s_generic_sound,           // Impact sounds
     {1.0f, 1.0f, 1.0f, 0.58f}, // Impact colour
     8,                         // Impact particles number
+    256.0f,                    // Impact particles force
     -4.0f,                     // Impact particles gravity
 };
 
+static constexpr Ic::Material FLESH_MATERIAL = {
+    Ic::Material::Type::Flesh,  // Type
+    s_flesh_decal,              // Decals
+    s_flesh_sound,              // Impact sounds
+    {0.6f, 0.05f, 0.05f, 0.4f}, // Impact colour
+    4,                          // Impact particles number
+    64.0f,                      // Impact particles force
+    -4.0f,                      // Impact particles gravity
+};
 
-Ic::Material Ic::GetMaterial(const char* texture_name)
+
+const Ic::Material* Ic::GetMaterial(const char* texture_name, bool* do_decals)
 {
-	Material ret;
-	bool lad_found = false;
-	bool do_decals = true;
+	const Material* ret = &GENERIC_MATERIAL; // Assume it for now
+	*do_decals = true;                       // Ditto
 
 	if (texture_name == nullptr)
-		return GENERIC_MATERIAL;
+		return ret;
 
+	bool lad_found = false;
 	for (const char* c = texture_name; c != 0x00 && c < texture_name + 3; c += 1) // Yes, up to 3 characters
 	{
 		if (*c == '#') // This lad
@@ -99,23 +119,39 @@ Ic::Material Ic::GetMaterial(const char* texture_name)
 			break;
 		}
 		else if (*c == 'c')
-			ret = CONCRETE_MATERIAL;
+			ret = &CONCRETE_MATERIAL;
 		else if (*c == 'm')
-			ret = METAL_MATERIAL;
+			ret = &METAL_MATERIAL;
 		else if (*c == 'w')
-			ret = WOOD_MATERIAL;
+			ret = &WOOD_MATERIAL;
 		else if (*c == 'd')
-			ret = DIRT_MATERIAL;
+			ret = &DIRT_MATERIAL;
 		else if (*c == 's')
-			ret = SNOW_MATERIAL;
+			ret = &SNOW_MATERIAL;
+		else if (*c == 'f')
+			ret = &FLESH_MATERIAL;
 		else if (*c == 'x')
-			do_decals = false;
+			*do_decals = false;
 	}
 
-	if (do_decals == false)
-		ret.decals = nullptr;
+	// Return generic if texture did't had our nomenclature
+	if (lad_found == false)
+	{
+		*do_decals = true;
+		return &GENERIC_MATERIAL;
+	}
 
 	// Bye!
-	// (return generic if texture did't had our nomenclature)
-	return (lad_found == false) ? GENERIC_MATERIAL : ret;
+	return ret;
+}
+
+
+const Ic::Material* Ic::GetMaterial(Ic::Material::Type type)
+{
+	const Ic::Material* array[] = {
+	    &GENERIC_MATERIAL, &CONCRETE_MATERIAL, &METAL_MATERIAL, &WOOD_MATERIAL,
+	    &DIRT_MATERIAL,    &SNOW_MATERIAL,     &FLESH_MATERIAL,
+	};
+
+	return array[static_cast<int>(type)];
 }
