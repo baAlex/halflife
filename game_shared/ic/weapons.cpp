@@ -259,6 +259,101 @@ void Ic::ClosedBoltBehaviour::Reload(const Properties* p)
 // ================
 
 
+static float sEasing(float x)
+{
+	return Ic::Mix(x, x * x * x, 0.5f);
+	// return x * x * x; // Too much
+}
+
+void Ic::WeaponFire(const Ic::WeaponProperties* props, Ic::Vector3 origin, Ic::Vector3 view_angle, uint16_t rng_state,
+                    int rounds_no, float accuracy,
+                    std::function<void(Vector3 start, Vector3 end, Vector3 up, Vector3 right)> callback)
+{
+	Vector3 forward;
+	Vector3 right;
+	Vector3 up;
+	Vector3 end;
+
+	{
+		// Creating a common sense AngleVectors():
+
+		// forward.x = cos(v.x) * cos(v.y);
+		// forward.y = cos(v.x) * sin(v.y);
+		// forward.z = -sin(v.x);
+
+		// right.x = cos(v.x) * cos(v.y - (M_PI / 2.0)); // Or '-90' in degrees
+		// right.y = cos(v.x) * sin(v.y - (M_PI / 2.0));
+		// right.z = -sin(v.x);
+
+		// up.x = cos(v.x - (M_PI / 2.0)) * cos(v.y);
+		// up.y = cos(v.x - (M_PI / 2.0)) * sin(v.y);
+		// up.z = -sin(v.x - (M_PI / 2.0));
+
+		// And since 'cos(x - pi / 2) = sin(x)' and 'sin(x - pi / 2) = -cos(x)',
+		// we get:
+
+		const float cp = cosf(DegToRad(view_angle[0]));
+		const float sp = sinf(DegToRad(view_angle[0]));
+		const float cy = cosf(DegToRad(view_angle[1]));
+		const float sy = sinf(DegToRad(view_angle[1]));
+
+		// clang-format off
+		forward = {cp * cy, cp  * sy, -sp};
+		right =   {cp * sy, -cp * cy, -sp};
+		up =      {sp * cy, sp  * sy, cp};
+		// clang-format on
+
+		// According to internet I stumbled into a roll-less form of "Direction Cosine
+		// Matrix (DCM)"... should work tho. Lets see for how long this code survives.
+
+		// PS: And if I add back roll, it basically morphs into a rotation matrix with
+		// a coordinate system and euler order that I'm not used to. Same old thing
+		// that we all known.
+	}
+
+	// Iterate rounds
+	for (int r = 0; r < rounds_no; r += 1)
+	{
+		// Calculate round spread
+		float round_spread_x;
+		float round_spread_y;
+		{
+			const float angle = RandomFloat(&rng_state) * static_cast<float>(M_PI) * 2.0f;
+			const float length = sEasing(RandomFloat(&rng_state) * 2.0f - 1.0f) * accuracy * props->spread;
+			round_spread_x = cosf(angle) * length;
+			round_spread_y = sinf(angle) * length;
+		}
+
+		// Iterate pellets
+		for (int p = 0; p < props->pellets_no; p += 1)
+		{
+			float pellet_dispersion_x = round_spread_x;
+			float pellet_dispersion_y = round_spread_y;
+
+			// Calculate pellet dispersion
+			if (p > 0)
+			{
+				const float angle = RandomFloat(&rng_state) * static_cast<float>(M_PI) * 2.0f;
+				const float length = sEasing(RandomFloat(&rng_state) * 2.0f - 1.0f) * props->pellets_dispersion;
+				pellet_dispersion_x += cosf(angle) * length;
+				pellet_dispersion_y += sinf(angle) * length;
+			}
+
+			// Trace ray
+			end.x = origin.x + forward.x * 8192.0f + right.x * pellet_dispersion_x + up.x * pellet_dispersion_y;
+			end.y = origin.y + forward.y * 8192.0f + right.y * pellet_dispersion_x + up.y * pellet_dispersion_y;
+			end.z = origin.z + forward.z * 8192.0f + right.z * pellet_dispersion_x + up.z * pellet_dispersion_y;
+
+			// Callback!
+			callback(origin, end, up, right);
+		}
+	}
+}
+
+
+// ================
+
+
 void Ic::GeneralizedWeapon::CommonInitialisation(int id, const ClosedBoltBehaviour::Properties* props, WeaponMode mode)
 {
 	m_mode = mode;

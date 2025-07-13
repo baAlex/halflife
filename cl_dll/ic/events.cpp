@@ -130,36 +130,109 @@ static void sWorldImpact(float* impact_normal, int impacted_model, const float* 
 }
 
 
-static float sClientSideOrigin(int entity, const float* server_origin, bool server_crouch, float* out)
+Ic::Vector3 sClientSideOrigin(int entity, const float* server_origin, bool server_crouch)
 {
 	// Events work in first and third-person, in first person tho, we need more precision
 	// regarding height. And sadly that is only achievable from client side point of view
-
-	out[0] = 0.0f;
-	out[1] = 0.0f;
-	out[2] = 0.0f;
+	Ic::Vector3 ret = {};
 
 	// Are we client's player?
 	if (gEngfuncs.pEventAPI->EV_IsLocal(entity - 1) != 0) // Valve uses that mysterious '-1'
 	{
-		gEngfuncs.pEventAPI->EV_LocalPlayerViewheight(out);
+		gEngfuncs.pEventAPI->EV_LocalPlayerViewheight(reinterpret_cast<float*>(&ret.x));
 	}
 	else
 	{
 		// Nope, calculate height as server does
-		out[2] += static_cast<float>((server_crouch == false) ? DEFAULT_VIEWHEIGHT : VEC_DUCK_VIEW);
+		ret.z += static_cast<float>((server_crouch == false) ? DEFAULT_VIEWHEIGHT : VEC_DUCK_VIEW);
 	}
 
-	out[0] += server_origin[0];
-	out[1] += server_origin[1];
-	out[2] += server_origin[2];
+	ret.x += server_origin[0];
+	ret.y += server_origin[1];
+	ret.z += server_origin[2];
+	return ret;
 }
 
 
-static float sEasing(float x)
+static void sDoThings(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up,
+                      Ic::Vector3 right, float light_at_impact, int pellets_no)
 {
-	return Ic::Mix(x, x * x * x, 0.5f);
-	// return x * x * x; // Too much
+	pmtrace_t tr; // Omg, so Quake-ish!
+	float temp1[3];
+	float temp2[3];
+	float dev_colour[3];
+
+	float* s = reinterpret_cast<float*>(&start.x);
+	float* e = reinterpret_cast<float*>(&end.x);
+
+	// Trace ray
+	gEngfuncs.pEventAPI->EV_PlayerTrace(s, e, PM_NORMAL, -1, &tr);
+
+	// Impact effects
+	if (gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent)->studiomodel == nullptr)
+	{
+		// We impacted the world
+
+		const physent_s* entity = gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent);
+		if (entity != nullptr && (entity->solid == SOLID_BSP || entity->movetype == MOVETYPE_PUSHSTEP))
+		{
+			// EV_TraceTexture() is quite imprecise, so rather than let it cast from eyes all
+			// the way to target, we trace from points near to the already traced surface
+			temp1[0] = tr.endpos[0] + tr.plane.normal[0] * 2.0f;
+			temp1[1] = tr.endpos[1] + tr.plane.normal[1] * 2.0f;
+			temp1[2] = tr.endpos[2] + tr.plane.normal[2] * 2.0f;
+			end[0] = tr.endpos[0] - tr.plane.normal[0] * 2.0f;
+			end[1] = tr.endpos[1] - tr.plane.normal[1] * 2.0f;
+			end[2] = tr.endpos[2] - tr.plane.normal[2] * 2.0f;
+
+			const char* texture_name = gEngfuncs.pEventAPI->EV_TraceTexture(tr.ent, temp1, e);
+			// gEngfuncs.Con_Printf("#### '%s'\n", texture_name);
+
+			sWorldImpact(tr.plane.normal, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), s, tr.endpos, texture_name,
+			             light_at_impact, pellets_no);
+
+			dev_colour[0] = 0.0f;
+			dev_colour[1] = 0.0f;
+			dev_colour[2] = 0.5f;
+		}
+	}
+	else
+	{
+		// We impacted an entity
+		sEntityImpact(tr.plane.normal, s, tr.endpos, light_at_impact, pellets_no);
+
+		dev_colour[0] = 0.5f;
+		dev_colour[1] = 0.0f;
+		dev_colour[2] = 0.0f;
+	}
+
+	// Render tracer
+	// Using 'client_side_start', as is purely for aesthetics reasons
+	temp1[0] = client_side_start.x - up.x * 3.0f + right.x * 1.0f; // TODO, there has to be a better
+	temp1[1] = client_side_start.y - up.y * 3.0f + right.y * 1.0f; // way to determine gun origin
+	temp1[2] = client_side_start.z - up.z * 3.0f + right.z * 1.0f;
+
+	temp2[0] = temp1[0]; // R_TracerEffect() modifies input, ewww...
+	temp2[1] = temp1[1]; // (TODO, confirm it better)
+	temp2[2] = temp1[2];
+
+	gEngfuncs.pEfxAPI->R_TracerEffect(temp1, tr.endpos);
+
+	// Render line (for debuging purposes)
+	if (Ic::GetDeveloperLevel() > 1)
+	{
+		const int dev_sprite = gEngfuncs.pEventAPI->EV_FindModelIndex("sprites/smoke.spr");
+
+		gEngfuncs.pEfxAPI->R_BeamPoints(temp2, tr.endpos, dev_sprite, //
+		                                4.0f,                         // Life
+		                                0.5f,                         // Width
+		                                0.0f,                         // Amplitude
+		                                1.0f,                         // Brightness
+		                                0,                            // Speed
+		                                0,                            // Start frame
+		                                0,                            // Frame rate
+		                                dev_colour[0], dev_colour[1], dev_colour[2]);
+	}
 }
 
 
@@ -167,144 +240,29 @@ template <typename W>
 static void sGenericEvent(int entity, float* origin, float* angles, bool crouch, float accuracy, int rounds_no,
                           int seed, float light_at_impact)
 {
-	float dev_colour[3];
-
-	pmtrace_t tr; // Omg, so Quake-ish!
-	float forward[3];
-	float right[3];
-	float up[3];
-	float end[3];
-	float client_side_origin[3];
-
-	uint16_t rng_state = static_cast<uint16_t>(seed); // Using our rng, not Valve one, in order to being in sync
-	                                                  // with server (which uses this rng)
-
-	// gEngfuncs.Con_Printf("#### IcEventX(), %f, %i, %u\n", accuracy, rounds_no, seed);
+	Ic::Vector3 client_side_origin = sClientSideOrigin(entity, origin, crouch);
+	origin[2] += static_cast<float>((crouch == false) ? DEFAULT_VIEWHEIGHT
+	                                                  : VEC_DUCK_VIEW); // Notice that is done after sClientSideOrigin()
 
 	// Fire sound
 	gEngfuncs.pEventAPI->EV_PlaySound(entity, origin, CHAN_WEAPON, W::PROPS.fire_sound,
 	                                  gEngfuncs.pfnRandomFloat(0.92f, 1.0f), ATTN_NORM, 0,
 	                                  98 + gEngfuncs.pfnRandomLong(0, 3));
 
-	// Set some things before loop
-	gEngfuncs.pfnAngleVectors(angles, forward, right, up);
-
-	sClientSideOrigin(entity, origin, crouch, client_side_origin);
-	origin[2] += static_cast<float>((crouch == false) ? DEFAULT_VIEWHEIGHT : VEC_DUCK_VIEW);
-
+	// Set global state thingies
 	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers(entity - 1);
+	gEngfuncs.pEventAPI->EV_SetTraceHull(2);
 
-	gEngfuncs.pEventAPI->EV_SetSolidPlayers(entity - 1); // A global state, configuration thing
-	gEngfuncs.pEventAPI->EV_SetTraceHull(2);             // for the tracer logic
+	//
+	Ic::WeaponFire(&W::PROPS, {origin[0], origin[1], origin[2]}, {angles[0], angles[1], angles[2]},
+	               static_cast<uint16_t>(seed), rounds_no, accuracy,
+	               [=](Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up, Ic::Vector3 right) //
+	               {                                                                          //
+		               sDoThings(client_side_origin, start, end, up, right, light_at_impact, W::PROPS.pellets_no);
+	               });
 
-	// Iterate rounds
-	for (int r = 0; r < rounds_no; r += 1)
-	{
-		// Calculate round spread
-		float round_spread_x;
-		float round_spread_y;
-		{
-			const float angle = Ic::RandomFloat(&rng_state) * static_cast<float>(M_PI) * 2.0f;
-			const float length = sEasing(Ic::RandomFloat(&rng_state) * 2.0f - 1.0f) * accuracy * W::PROPS.spread;
-			round_spread_x = cosf(angle) * length;
-			round_spread_y = sinf(angle) * length;
-		}
-
-		// Iterate pellets
-		for (int p = 0; p < W::PROPS.pellets_no; p += 1)
-		{
-			float pellet_dispersion_x = round_spread_x;
-			float pellet_dispersion_y = round_spread_y;
-
-			// Calculate pellet dispersion
-			if (p > 0)
-			{
-				const float angle = Ic::RandomFloat(&rng_state) * static_cast<float>(M_PI) * 2.0f;
-				const float length = sEasing(Ic::RandomFloat(&rng_state) * 2.0f - 1.0f) * W::PROPS.pellets_dispersion;
-				pellet_dispersion_x += cosf(angle) * length;
-				pellet_dispersion_y += sinf(angle) * length;
-			}
-
-			// Trace ray
-			// Using 'origin', not 'client_side_origin', we want to render the results that server expects
-			end[0] = origin[0] + forward[0] * 8192.0f + up[0] * pellet_dispersion_x + right[0] * pellet_dispersion_y;
-			end[1] = origin[1] + forward[1] * 8192.0f + up[1] * pellet_dispersion_x + right[1] * pellet_dispersion_y;
-			end[2] = origin[2] + forward[2] * 8192.0f + up[2] * pellet_dispersion_x + right[2] * pellet_dispersion_y;
-
-			gEngfuncs.pEventAPI->EV_PlayerTrace(origin, end, PM_NORMAL, -1, &tr);
-
-			// Impact effects
-			float temp[3];
-
-			if (gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent)->studiomodel == nullptr)
-			{
-				// We impacted the world
-
-				const physent_s* entity = gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent);
-				if (entity != nullptr && (entity->solid == SOLID_BSP || entity->movetype == MOVETYPE_PUSHSTEP))
-				{
-					// EV_TraceTexture() is quite imprecise, so rather than let it cast from eyes all
-					// the way to target, we trace from points near to the already traced surface
-					temp[0] = tr.endpos[0] + tr.plane.normal[0] * 2.0f;
-					temp[1] = tr.endpos[1] + tr.plane.normal[1] * 2.0f;
-					temp[2] = tr.endpos[2] + tr.plane.normal[2] * 2.0f;
-					end[0] = tr.endpos[0] - tr.plane.normal[0] * 2.0f;
-					end[1] = tr.endpos[1] - tr.plane.normal[1] * 2.0f;
-					end[2] = tr.endpos[2] - tr.plane.normal[2] * 2.0f;
-
-					const char* texture_name = gEngfuncs.pEventAPI->EV_TraceTexture(tr.ent, temp, end);
-					// gEngfuncs.Con_Printf("#### IcEventX(), '%s'\n", texture_name);
-
-					sWorldImpact(tr.plane.normal, gEngfuncs.pEventAPI->EV_IndexFromTrace(&tr), origin, tr.endpos,
-					             texture_name, light_at_impact, W::PROPS.pellets_no);
-
-					dev_colour[0] = 0.0f;
-					dev_colour[1] = 0.0f;
-					dev_colour[2] = 0.5f;
-				}
-			}
-			else
-			{
-				// We impacted an entity
-				sEntityImpact(tr.plane.normal, origin, tr.endpos, light_at_impact, W::PROPS.pellets_no);
-
-				dev_colour[0] = 0.5f;
-				dev_colour[1] = 0.0f;
-				dev_colour[2] = 0.0f;
-			}
-
-			// Render tracer
-			// Here using 'client_side_origin', as is purely for aesthetics reasons
-			float temp_temp[3];
-
-			temp[0] = client_side_origin[0] - up[0] * 3.0f + right[0] * 1.0f; // TODO, there has to be a better
-			temp[1] = client_side_origin[1] - up[1] * 3.0f + right[1] * 1.0f; // way to determine gun origin
-			temp[2] = client_side_origin[2] - up[2] * 3.0f + right[2] * 1.0f;
-
-			temp_temp[0] = temp[0]; // R_TracerEffect() modifies input, ewww...
-			temp_temp[1] = temp[1]; // (TODO, confirm it better)
-			temp_temp[2] = temp[2];
-
-			gEngfuncs.pEfxAPI->R_TracerEffect(temp, tr.endpos);
-
-			// Render line (for debuging purposes)
-			if (Ic::GetDeveloperLevel() > 1)
-			{
-				const int dev_sprite = gEngfuncs.pEventAPI->EV_FindModelIndex("sprites/smoke.spr");
-
-				gEngfuncs.pEfxAPI->R_BeamPoints(temp_temp, tr.endpos, dev_sprite, //
-				                                4.0f,                             // Life
-				                                0.5f,                             // Width
-				                                0.0f,                             // Amplitude
-				                                1.0f,                             // Brightness
-				                                0,                                // Speed
-				                                0,                                // Start frame
-				                                0,                                // Frame rate
-				                                dev_colour[0], dev_colour[1], dev_colour[2]);
-			}
-		}
-	}
-
+	// Restore global state thingies
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 }
 

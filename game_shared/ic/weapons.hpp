@@ -14,7 +14,10 @@ defined by the Mozilla Public License, v. 2.0.
 #define IC_WEAPONS_HPP
 
 #include "base.hpp"
+#include "vector.hpp"
+
 #include <stdint.h>
+#include <functional>
 
 namespace Ic
 {
@@ -106,6 +109,10 @@ class ClosedBoltBehaviour
 	Timer m_first_fire;
 	int m_fired_so_far; // Counter from first fire
 };
+
+
+void WeaponFire(const WeaponProperties* props, Vector3 origin, Vector3 view_angle, uint16_t rng_state, int rounds_no,
+                float accuracy, std::function<void(Vector3 start, Vector3 end, Vector3 up, Vector3 right)>);
 
 
 class PistolWeapon;
