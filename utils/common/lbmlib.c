@@ -10,8 +10,52 @@
 
 // lbmlib.c
 
-#include <WINDOWS.H>
-#include <STDIO.H>
+#include <stdio.h>
+// #include <WINDOWS.H>
+
+
+// <baAlex>
+#include <stdint.h>
+
+typedef uint8_t BYTE;
+typedef uint32_t ULONG;
+
+typedef struct {
+	// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-rgbquad
+	uint8_t rgbBlue;
+	uint8_t rgbGreen;
+	uint8_t rgbRed;
+	uint8_t rgbReserved;
+} RGBQUAD;
+
+typedef struct {
+	// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapfileheader
+	uint16_t bfType;
+	uint32_t bfSize;
+	uint16_t bfReserved1;
+	uint16_t bfReserved2;
+	uint32_t bfOffBits;
+} BITMAPFILEHEADER;
+
+typedef struct {
+	// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
+	uint32_t biSize;
+	int32_t  biWidth;
+	int32_t  biHeight;
+	uint16_t biPlanes;
+	uint16_t biBitCount;
+	uint32_t biCompression;
+	uint32_t biSizeImage;
+	int32_t  biXPelsPerMeter;
+	int32_t  biYPelsPerMeter;
+	uint32_t biClrUsed;
+	uint32_t biClrImportant;
+} BITMAPINFOHEADER;
+
+#define BI_RGB 0 // https://paulbourke.net/dataformats/bmp/BITMAP.H
+#define MAKEWORD(a, b) ((uint16_t)(((uint8_t)(a)) | ((uint16_t)((uint8_t)(b)) << 8)))
+// </baAlex>
+
 
 #include "cmdlib.h"
 #include "lbmlib.h"

@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <unistd.h> // (baAlex), getwd()
+
 #ifdef WIN32
 #include <direct.h>
 #endif

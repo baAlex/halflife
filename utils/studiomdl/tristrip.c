@@ -20,11 +20,11 @@
 #include <sys/stat.h>
 
 #include "archtypes.h"
-#include "cmdlib.h"
-#include "lbmlib.h"
-#include "scriplib.h"
-#include "mathlib.h"
-#include "..\..\engine\studio.h"
+#include "utils/common/cmdlib.h"
+#include "utils/common/lbmlib.h"
+#include "utils/common/scriplib.h"
+#include "utils/common/mathlib.h" // There are two different "mathlib.h"
+#include "studio.h"
 #include "studiomdl.h"
 
 int		used[MAXSTUDIOTRIANGLES];

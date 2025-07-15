@@ -1,0 +1,22 @@
+
+cflags = -m32 -Wall -Wextra -pedantic -O0 -g -I../../ -I../../common/ -I../../public/ -I../../utils/ -I../../engine/ -I../../dlls/
+ldflags = -m32 -lm
+
+rule cc
+  command = clang -fdiagnostics-color=always $cflags -c $in -o $out
+
+rule ld
+  command = clang -fdiagnostics-color=always $ldflags $in -o $out
+
+
+build .build/write.o:     cc write.c
+build .build/tristrip.o:  cc tristrip.c
+build .build/studiomdl.o: cc studiomdl.c
+
+build .build/cmdlib.o:   cc ../common/cmdlib.c
+build .build/scriplib.o: cc ../common/scriplib.c
+build .build/mathlib.o:  cc ../common/mathlib.c
+build .build/lbmlib.o:   cc ../common/lbmlib.c
+
+
+build studiomdl: ld .build/write.o .build/tristrip.o .build/studiomdl.o .build/cmdlib.o .build/scriplib.o .build/mathlib.o .build/lbmlib.o

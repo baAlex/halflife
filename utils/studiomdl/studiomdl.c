@@ -25,15 +25,54 @@
 #include <math.h>
 
 #include "archtypes.h"
-#include "cmdlib.h"
-#include "lbmlib.h"
-#include "scriplib.h"
-#include "mathlib.h"
+#include "utils/common/cmdlib.h"
+#include "utils/common/lbmlib.h"
+#include "utils/common/scriplib.h"
+#include "utils/common/mathlib.h" // There are two different "mathlib.h"
 #define EXTERN
-#include "../../engine/studio.h"
+#include "studio.h"
 #include "studiomdl.h"
-#include "../../dlls/activity.h"
-#include "../../dlls/activitymap.h"
+#include "activity.h"
+#include "activitymap.h"
+
+
+int numbones = 0;
+int numrenamedbones = 0;
+int numhitboxes = 0;
+int numhitgroups = 0;
+s_bonecontroller_t bonecontroller[MAXSTUDIOSRCBONES] = {0};
+int numbonecontrollers = 0;
+s_attachment_t attachment[MAXSTUDIOSRCBONES] = {0};
+int numattachments = 0;
+
+
+int sCaseInsensitiveStrcmp(const char* a, const char* b)
+{
+	for (;; a += 1, b += 1)
+	{
+		const char aa = (*a >= 'A' && *a <= 'Z') ? *a + 32 : *a;
+		const char bb = (*b >= 'A' && *b <= 'Z') ? *b + 32 : *b;
+		if (aa != bb)
+			return (*a - *b);
+		if (*a == 0x00)
+			break;
+	}
+	return 0;
+}
+
+int sCaseInsensitiveStrncmp(const char* a, const char* b, size_t len)
+{
+	for (;; a += 1, b += 1, len -= 1)
+	{
+		const char aa = (*a >= 'A' && *a <= 'Z') ? *a + 32 : *a;
+		const char bb = (*b >= 'A' && *b <= 'Z') ? *b + 32 : *b;
+		if (aa != bb)
+			return (*a - *b);
+		if (*a == 0x00 || len == 0)
+			break;
+	}
+	return 0;
+}
 
 
 static int force_powerof2_textures = 0;
@@ -573,7 +612,7 @@ void SimplifyModel (void)
 	{
 		for (j = 0; j < numbones; j++)
 		{
-			if (stricmp( bonecontroller[i].name, bonetable[j].name) == 0)
+			if (sCaseInsensitiveStrcmp( bonecontroller[i].name, bonetable[j].name) == 0)
 				break;
 		}
 		if (j >= numbones)
@@ -588,7 +627,7 @@ void SimplifyModel (void)
 	{
 		for (j = 0; j < numbones; j++)
 		{
-			if (stricmp( attachment[i].bonename, bonetable[j].name) == 0)
+			if (sCaseInsensitiveStrcmp( attachment[i].bonename, bonetable[j].name) == 0)
 				break;
 		}
 		if (j >= numbones)
@@ -620,7 +659,7 @@ void SimplifyModel (void)
 	{
 		for (k = 0; k < numbones; k++)
 		{
-			if (strcmpi( bonetable[k].name, hitgroup[j].name) == 0)
+			if (sCaseInsensitiveStrcmp( bonetable[k].name, hitgroup[j].name) == 0)
 			{
 				bonetable[k].group = hitgroup[j].group;
 				break;
@@ -712,7 +751,7 @@ void SimplifyModel (void)
 		{
 			for (k = 0; k < numbones; k++)
 			{
-				if (strcmpi( bonetable[k].name, hitbox[j].name) == 0)
+				if (sCaseInsensitiveStrcmp( bonetable[k].name, hitbox[j].name) == 0)
 				{
 					hitbox[j].bone = k;
 					break;
@@ -1088,21 +1127,21 @@ void SimplifyModel (void)
 
 int lookupControl( char *string )
 {
-	if (stricmp(string,"X")==0) return STUDIO_X;
-	if (stricmp(string,"Y")==0) return STUDIO_Y;
-	if (stricmp(string,"Z")==0) return STUDIO_Z;
-	if (stricmp(string,"XR")==0) return STUDIO_XR;
-	if (stricmp(string,"YR")==0) return STUDIO_YR;
-	if (stricmp(string,"ZR")==0) return STUDIO_ZR;
-	if (stricmp(string,"LX")==0) return STUDIO_LX;
-	if (stricmp(string,"LY")==0) return STUDIO_LY;
-	if (stricmp(string,"LZ")==0) return STUDIO_LZ;
-	if (stricmp(string,"AX")==0) return STUDIO_AX;
-	if (stricmp(string,"AY")==0) return STUDIO_AY;
-	if (stricmp(string,"AZ")==0) return STUDIO_AZ;
-	if (stricmp(string,"AXR")==0) return STUDIO_AXR;
-	if (stricmp(string,"AYR")==0) return STUDIO_AYR;
-	if (stricmp(string,"AZR")==0) return STUDIO_AZR;
+	if (sCaseInsensitiveStrcmp(string,"X")==0) return STUDIO_X;
+	if (sCaseInsensitiveStrcmp(string,"Y")==0) return STUDIO_Y;
+	if (sCaseInsensitiveStrcmp(string,"Z")==0) return STUDIO_Z;
+	if (sCaseInsensitiveStrcmp(string,"XR")==0) return STUDIO_XR;
+	if (sCaseInsensitiveStrcmp(string,"YR")==0) return STUDIO_YR;
+	if (sCaseInsensitiveStrcmp(string,"ZR")==0) return STUDIO_ZR;
+	if (sCaseInsensitiveStrcmp(string,"LX")==0) return STUDIO_LX;
+	if (sCaseInsensitiveStrcmp(string,"LY")==0) return STUDIO_LY;
+	if (sCaseInsensitiveStrcmp(string,"LZ")==0) return STUDIO_LZ;
+	if (sCaseInsensitiveStrcmp(string,"AX")==0) return STUDIO_AX;
+	if (sCaseInsensitiveStrcmp(string,"AY")==0) return STUDIO_AY;
+	if (sCaseInsensitiveStrcmp(string,"AZ")==0) return STUDIO_AZ;
+	if (sCaseInsensitiveStrcmp(string,"AXR")==0) return STUDIO_AXR;
+	if (sCaseInsensitiveStrcmp(string,"AYR")==0) return STUDIO_AYR;
+	if (sCaseInsensitiveStrcmp(string,"AZR")==0) return STUDIO_AZR;
 	return -1;
 }
 
@@ -1117,7 +1156,7 @@ char *stristr( const char *string, const char *string2 )
 	while (string) {
 		for (; *string && tolower( *string ) != c; string++);
 		if (*string) {
-			if (strnicmp( string, string2, len ) == 0) {
+			if (sCaseInsensitiveStrncmp( string, string2, len ) == 0) {
 				break;
 			}
 			string++;
@@ -1140,7 +1179,7 @@ int lookup_texture( char *texturename )
 	int i;
 
 	for (i = 0; i < numtextures; i++) {
-		if (stricmp( texture[i].name, texturename ) == 0) {
+		if (sCaseInsensitiveStrcmp( texture[i].name, texturename ) == 0) {
 			return i;
 		}
 	}
@@ -1557,12 +1596,12 @@ void ResizeTexture( s_texture_t *ptexture )
 
 	// TODO: process the texture and flag it if fullbright or transparent are used.
 	// TODO: only save as many palette entries as are actually used.
-	if (gamma != 1.8)
+	if (gamma_gamma != 1.8)
 	{
 		// gamma correct the monster textures to a gamma of 1.8
 		float g;
 		byte *psrc = (byte *)ptexture->ppal;
-		g = gamma / 1.8;
+		g = gamma_gamma / 1.8;
 		for (i = 0; i < 768; i++)
 		{
 			pdest[i] = pow( psrc[i] / 255.0, g ) * 255;
@@ -1604,7 +1643,7 @@ void Grab_Skin ( s_texture_t *ptexture )
 		sprintf (file1, "%s/%s", cddir, ptexture->name);
 	}
 	
-	if (stricmp( ".bmp", &file1[strlen(file1)-4]) == 0) {
+	if (sCaseInsensitiveStrcmp( ".bmp", &file1[strlen(file1)-4]) == 0) {
 		Grab_BMP( file1, ptexture );
 	}
 	else {
@@ -1808,7 +1847,7 @@ void Grab_Triangles( s_model_t *pmodel )
 					strcpy( texturename, defaulttexture[i] );
 					break;
 				}
-				if (stricmp( texturename, sourcetexture[i]) == 0) 
+				if (sCaseInsensitiveStrcmp( texturename, sourcetexture[i]) == 0) 
 				{
 					strcpy( texturename, defaulttexture[i] );
 					break;
@@ -2192,11 +2231,11 @@ void Option_Studio( )
 	while (TokenAvailable())
 	{
 		GetToken(false);
-		if (stricmp( "reverse", token ) == 0)
+		if (sCaseInsensitiveStrcmp( "reverse", token ) == 0)
 		{
 			flip_triangles = 0;
 		}
-		else if (stricmp( "scale", token ) == 0)
+		else if (sCaseInsensitiveStrcmp( "scale", token ) == 0)
 		{
 			GetToken(false);
 			scale_up = atof( token );
@@ -2248,9 +2287,9 @@ void Cmd_Bodygroup( )
 			is_started = 1;
 		else if (token[0] == '}')
 			break;
-		else if (stricmp("studio", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("studio", token ) == 0)
 			Option_Studio( );
-		else if (stricmp("blank", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("blank", token ) == 0)
 			Option_Blank( );
 	} while (1);
 
@@ -2627,11 +2666,11 @@ int lookupActivity( char *szActivity )
 
 	for (i = 0; activity_map[i].name; i++)
 	{
-		if (stricmp( szActivity, activity_map[i].name ) == 0)
+		if (sCaseInsensitiveStrcmp( szActivity, activity_map[i].name ) == 0)
 			return activity_map[i].type;
 	}
 	// match ACT_#
-	if (strnicmp( szActivity, "ACT_", 4 ) == 0)
+	if (sCaseInsensitiveStrncmp( szActivity, "ACT_", 4 ) == 0)
 	{
 		return atoi( &szActivity[4] );
 	}
@@ -2691,54 +2730,54 @@ int Cmd_Sequence( )
 			}
 			return 1;
 		}
-		if (stricmp("{", token ) == 0)
+		if (sCaseInsensitiveStrcmp("{", token ) == 0)
 		{
 			depth++;
 		}
-		else if (stricmp("}", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("}", token ) == 0)
 		{
 			depth--;
 		}
-		else if (stricmp("deform", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("deform", token ) == 0)
 		{
 			Option_Deform( &sequence[numseq] );
 		}
-		else if (stricmp("event", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("event", token ) == 0)
 		{
 			depth -= Option_Event( &sequence[numseq] );
 		}
-		else if (stricmp("pivot", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("pivot", token ) == 0)
 		{
 			Option_AddPivot( &sequence[numseq] );
 		}
-		else if (stricmp("fps", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("fps", token ) == 0)
 		{
 			Option_Fps( &sequence[numseq] );
 		}
-		else if (stricmp("origin", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("origin", token ) == 0)
 		{
 			Option_Origin( );
 		}
-		else if (stricmp("rotate", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("rotate", token ) == 0)
 		{
 			Option_Rotate( );
 		}
-		else if (stricmp("scale", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("scale", token ) == 0)
 		{
 			Option_ScaleUp( );
 		}
-		else if (strnicmp("loop", token, 4 ) == 0)
+		else if (sCaseInsensitiveStrncmp("loop", token, 4 ) == 0)
 		{
 			sequence[numseq].flags |= STUDIO_LOOPING;
 		}
-		else if (strnicmp("frame", token, 5 ) == 0)
+		else if (sCaseInsensitiveStrncmp("frame", token, 5 ) == 0)
 		{
 			GetToken( false );
 			start = atoi( token );
 			GetToken( false );
 			end = atoi( token );
 		}
-		else if (strnicmp("blend", token, 5 ) == 0)
+		else if (sCaseInsensitiveStrncmp("blend", token, 5 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].blendtype[0] = lookupControl( token );
@@ -2747,19 +2786,19 @@ int Cmd_Sequence( )
 			GetToken( false );
 			sequence[numseq].blendend[0] = atof( token );
 		}
-		else if (strnicmp("node", token, 4 ) == 0)
+		else if (sCaseInsensitiveStrncmp("node", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = sequence[numseq].exitnode = atoi( token );
 		}
-		else if (strnicmp("transition", token, 4 ) == 0)
+		else if (sCaseInsensitiveStrncmp("transition", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = atoi( token );
 			GetToken( false );
 			sequence[numseq].exitnode = atoi( token );
 		}
-		else if (strnicmp("rtransition", token, 4 ) == 0)
+		else if (sCaseInsensitiveStrncmp("rtransition", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = atoi( token );
@@ -2771,7 +2810,7 @@ int Cmd_Sequence( )
 		{
 			sequence[numseq].motiontype |= lookupControl( token );
 		}
-		else if (stricmp("animation", token ) == 0)
+		else if (sCaseInsensitiveStrcmp("animation", token ) == 0)
 		{
 			GetToken(false);
 			strcpyn( smdfilename[numblends++], token );
@@ -2854,7 +2893,7 @@ int Cmd_Controller (void)
 {
 	if (GetToken (false))
 	{
-		if (!strcmpi("mouth",token))
+		if (!sCaseInsensitiveStrcmp("mouth",token))
 		{
 			bonecontroller[numbonecontrollers].index = 4;
 		}
@@ -2958,7 +2997,7 @@ void Cmd_Mirror (void)
 void Cmd_Gamma (void)
 {
 	GetToken (false);
-	gamma = atof( token );
+	gamma_gamma = atof( token );
 }
 
 
@@ -3357,7 +3396,7 @@ int main (int argc, char **argv)
 
 	normal_blend = cos( 2.0 * (Q_PI / 180.0));
 
-	gamma = 1.8;
+	gamma_gamma = 1.8;
 
 	if (argc == 1)
 		Error ("usage: studiomdl [-t texture] -r(tag reversed) -n(tag bad normals) -f(flip all triangles) [-a normal_blend_angle] -h(dump hboxes) -i(ignore warnings) -p(force power of 2 textures) [-g max_sequencegroup_size(K)] file.qc");

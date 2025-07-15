@@ -7,3 +7,7 @@ linux/hl_cdll_map.txt
 linux/hl_map.txt
 linux/ricochet_cdll_map.txt
 linux/ricochet_map.txt
+
+.build
+.ninja_log
+utils/studiomdl/studiomdl
