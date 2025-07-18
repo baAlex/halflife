@@ -53,6 +53,8 @@ void CStudioModelRenderer::Init( void )
 	m_pCvarDeveloper		= IEngineStudio.GetCvar( "developer" );
 	m_pCvarDrawEntities		= IEngineStudio.GetCvar( "r_drawentities" );
 
+	m_gun_fov = IEngineStudio.GetCvar( "gun_fov" );
+
 	m_pChromeSprite			= IEngineStudio.GetChromeSprite();
 
 	IEngineStudio.GetModelCounters( &m_pStudioModelCount, &m_pModelsDrawn );
@@ -512,6 +514,27 @@ void CStudioModelRenderer::StudioSetUpTransform (int trivial_accept)
 
 	angles[PITCH] = -angles[PITCH];
 	AngleMatrix (angles, (*m_protationmatrix));
+
+
+	if (m_pCurrentEntity == gEngfuncs.GetViewModel()) // (baAlex)
+	{
+		// Fake a lower fov by scaling model towards camera:
+		(*m_protationmatrix)[0][0] *= m_gun_fov->value;
+		(*m_protationmatrix)[1][0] *= m_gun_fov->value;
+		(*m_protationmatrix)[2][0] *= m_gun_fov->value;
+
+		// For reference, to scale the whole enchilada is:
+		// (*m_protationmatrix)[0][0] *= 2.0f;
+		// (*m_protationmatrix)[0][1] *= 2.0f;
+		// (*m_protationmatrix)[0][2] *= 2.0f;
+		// (*m_protationmatrix)[1][0] *= 2.0f;
+		// (*m_protationmatrix)[1][1] *= 2.0f;
+		// (*m_protationmatrix)[1][2] *= 2.0f;
+		// (*m_protationmatrix)[2][0] *= 2.0f;
+		// (*m_protationmatrix)[2][1] *= 2.0f;
+		// (*m_protationmatrix)[2][2] *= 2.0f;
+	}
+
 
 	if ( !IEngineStudio.IsHardware() )
 	{

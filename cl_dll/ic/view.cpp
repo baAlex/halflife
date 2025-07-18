@@ -22,6 +22,7 @@
 #include "pm_movevars.h"
 #include "usercmd.h"
 #include "ref_params.h"
+#include "cvardef.h"
 
 #include "Exports.h"
 
@@ -39,6 +40,11 @@ template <typename T> static inline constexpr void sVecOp(T callback)
 
 
 static unsigned s_frame; // Unsigned to let it wrap
+
+
+static cvar_t* s_gun_x;
+static cvar_t* s_gun_y;
+static cvar_t* s_gun_z;
 
 
 #define SMOOTH_Z
@@ -212,6 +218,17 @@ void Ic::ViewInitialise()
 {
 	gEngfuncs.Con_Printf("### Ic::ViewInitialise()\n");
 	s_frame = 0;
+
+	gEngfuncs.pfnRegisterVariable("gun_x", "6", 0);
+	gEngfuncs.pfnRegisterVariable("gun_y", "-1", 0);
+	gEngfuncs.pfnRegisterVariable("gun_z", "-9", 0);
+
+	gEngfuncs.pfnRegisterVariable("gun_fov", "0.666", 0); // StudioModelRendered() seems not being
+	                                                      // able to register cvars, only read them
+
+	s_gun_x = gEngfuncs.pfnGetCvarPointer("gun_x");
+	s_gun_y = gEngfuncs.pfnGetCvarPointer("gun_y");
+	s_gun_z = gEngfuncs.pfnGetCvarPointer("gun_z");
 }
 
 
@@ -278,6 +295,12 @@ static void sNormalView(struct ref_params_s* in_out)
 		sVecOp([&](int i) { view_model->origin[i] = in_out->vieworg[i]; });
 		sVecOp([&](int i) { view_model->angles[i] = in_out->cl_viewangles[i]; });
 		view_model->angles[0] = -view_model->angles[0]; // Pitch is inverted [a]
+
+		sVecOp([&](int i) { view_model->origin[i] += in_out->right[i] * s_gun_x->value; });
+		sVecOp([&](int i) { view_model->origin[i] += in_out->forward[i] * s_gun_y->value; });
+		sVecOp([&](int i) { view_model->origin[i] += in_out->up[i] * s_gun_z->value; });
+
+		// gEngfuncs.Con_Printf("### %.2f, %.2f, %.2f\n", s_gun_x->value, s_gun_y->value, s_gun_z->value);
 
 		// Procedural animations
 #ifdef SWAY

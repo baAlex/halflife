@@ -151,6 +151,9 @@ class GeneralizedWeapon
 };
 
 
+#define COMMON_SPREAD 3100.0f // A thing less to configure
+
+
 // Pistol, Glock like
 // ==================
 
@@ -168,9 +171,9 @@ class PistolWeapon final : public GeneralizedWeapon
 	    "Pistol",                                                     // Short name
 	    1,                                                            // Modes number
 	    {WeaponMode::Semi},                                           // Modes
-	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
-	    2.0f / 1.0f,                                                  // Accuracy decay
-	    1500.0f,                                                      // Spread
+	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 4), // Accuracy force
+	    2.0f / 0.8f,                                                  // Accuracy decay
+	    COMMON_SPREAD,                                                // Spread
 	    1,                                                            // Pellets
 	    0.0f,                                                         // Pellets dispersion
 	    "events/pistol-fire.sc",                                      // Fire event
@@ -209,7 +212,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Semi, WeaponMode::Manual},                       // Modes
 	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size - 1), // Accuracy force
 	    2.0f / 1.75f,                                                 // Accuracy decay
-	    3200.0f,                                                      // Spread
+	    COMMON_SPREAD,                                                // Spread
 	    12,                                                           // Pellets
 	    350.0f,                                                       // Pellets dispersion
 	    "events/shotgun-fire.sc",                                     // Fire event
@@ -243,17 +246,20 @@ class SmgWeapon final : public GeneralizedWeapon
 	};
 
 	static constexpr WeaponProperties PROPS = {
-	    3,                                                            // Id
-	    "SMG",                                                        // Short name
-	    2,                                                            // Modes number
-	    {WeaponMode::Automatic, WeaponMode::Semi},                    // Modes
-	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
-	    2.0f / 0.75f,                                                 // Accuracy decay
-	    2500.0f,                                                      // Spread
-	    1,                                                            // Pellets
-	    0.0f,                                                         // Pellets dispersion
-	    "events/smg-fire.sc",                                         // Fire event
-	    "weapons/smg-fire.wav",                                       // Fire sound
+	    3,                                         // Id
+	    "SMG",                                     // Short name
+	    2,                                         // Modes number
+	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
+
+	    1.0f /
+	        static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2 + BEHAVIOUR_PROPS.magazine_size / 4), // Accuracy force
+
+	    (2.0f / 0.5f),          // Accuracy decay
+	    COMMON_SPREAD,          // Spread
+	    1,                      // Pellets
+	    0.0f,                   // Pellets dispersion
+	    "events/smg-fire.sc",   // Fire event
+	    "weapons/smg-fire.wav", // Fire sound
 	};
 
 	void Initialise();
@@ -282,17 +288,23 @@ class ArWeapon final : public GeneralizedWeapon
 	};
 
 	static constexpr WeaponProperties PROPS = {
-	    4,                                                            // Id
-	    "AR",                                                         // Short name
-	    2,                                                            // Modes number
-	    {WeaponMode::Automatic, WeaponMode::Semi},                    // Modes
-	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2), // Accuracy force
-	    2.0f / 0.5f,                                                  // Accuracy decay
-	    3000.0f,                                                      // Spread
-	    1,                                                            // Pellets
-	    0.0f,                                                         // Pellets dispersion
-	    "events/ar-fire.sc",                                          // Fire event
-	    "weapons/ar-fire.wav",                                        // Fire sound
+	    4,                                         // Id
+	    "AR",                                      // Short name
+	    2,                                         // Modes number
+	    {WeaponMode::Automatic, WeaponMode::Semi}, // Modes
+	    SmgWeapon::PROPS.accuracy_force,           // Accuracy force
+
+	    // Accuracy decay, first I'm compensating being a slower weapon so both
+	    // perform the same, then I'm making it 1.75 "better"
+	    SmgWeapon::PROPS.accuracy_decay*(SmgWeapon::BEHAVIOUR_PROPS.bolt_travel_duration /
+	                                     BEHAVIOUR_PROPS.bolt_travel_duration) *
+	        1.75f,
+
+	    COMMON_SPREAD,         // Spread
+	    1,                     // Pellets
+	    0.0f,                  // Pellets dispersion
+	    "events/ar-fire.sc",   // Fire event
+	    "weapons/ar-fire.wav", // Fire sound
 	};
 
 	void Initialise();
@@ -327,7 +339,7 @@ class RifleWeapon final : public GeneralizedWeapon
 	    {WeaponMode::Manual},                                     // Modes
 	    1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size), // Accuracy force
 	    2.0f / 1.25f,                                             // Accuracy decay
-	    250.0f,                                                   // Spread
+	    COMMON_SPREAD,                                            // Spread
 	    1,                                                        // Pellets
 	    0.0f,                                                     // Pellets dispersion
 	    "events/rifle-fire.sc",                                   // Fire event
