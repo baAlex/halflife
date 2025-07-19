@@ -81,7 +81,7 @@ float Ic::Accuracy::Sample(Ic::Vector2 origin, Ic::Vector2 angles, int crouch, i
 		    Scale(Subtract(origin, m_prev_origin), 1.0f / (dt / WALK_CONTRIBUTION)); // We want deltas in game units
 		m_prev_origin = origin;
 
-		m_walk_speed = Ic::HolmerMix(Length(delta) / max_speed, m_walk_speed, WALK_SMOOTH, dt);
+		m_walk_speed = Ic::HolmerMix(m_walk_speed, Length(delta) / max_speed, WALK_SMOOTH, dt);
 	}
 
 	// Look
@@ -92,15 +92,15 @@ float Ic::Accuracy::Sample(Ic::Vector2 origin, Ic::Vector2 angles, int crouch, i
 
 		const float speed = sqrtf(dx * dx + dz * dz) / (360.0f / LOOK_CONTRIBUTION);
 		m_look_speed =
-		    Ic::AnglesHolmerMix(speed, m_look_speed, (speed > m_prev_look_speed) ? LOOK_SMOOTH[0] : LOOK_SMOOTH[1], dt);
+		    Ic::AnglesHolmerMix(m_look_speed, speed, (speed > m_prev_look_speed) ? LOOK_SMOOTH[0] : LOOK_SMOOTH[1], dt);
 		m_prev_look_speed = m_look_speed;
 	}
 
 	// The others
 	{
-		m_air = Ic::AnglesHolmerMix(air_float, m_air, AIR_SMOOTH, dt);
-		m_crouch = Ic::AnglesHolmerMix(crouch_float, m_crouch, CROUCH_SMOOTH, dt);
-		m_fire = Ic::AnglesHolmerMix(0.0f, m_fire, m_fire_decay, dt);
+		m_air = Ic::AnglesHolmerMix(m_air, air_float, AIR_SMOOTH, dt);
+		m_crouch = Ic::AnglesHolmerMix(m_crouch, crouch_float, CROUCH_SMOOTH, dt);
+		m_fire = Ic::AnglesHolmerMix(m_fire, 0.0f, m_fire_decay, dt);
 	}
 
 

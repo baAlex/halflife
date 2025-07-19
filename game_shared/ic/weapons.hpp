@@ -310,7 +310,7 @@ class ArWeapon final : public GeneralizedWeapon
 	    0.0f,                  // Pellets dispersion
 	    "events/ar-fire.sc",   // Fire event
 	    "weapons/ar-fire.wav", // Fire sound
-	    1.5f,                  // Fire kick
+	    1.0f,                  // Fire kick
 	};
 
 	void Initialise();

@@ -56,7 +56,7 @@ class Stabilizer
 
 	float Step(float rough, int on_ground, float dt)
 	{
-		m_smooth = Ic::HolmerMix(rough, m_smooth, (on_ground != 0) ? AMOUNT : AMOUNT_AIR, dt);
+		m_smooth = Ic::HolmerMix(m_smooth, rough, (on_ground != 0) ? AMOUNT : AMOUNT_AIR, dt);
 
 		// 30 units is enough to jump and crouch without trigger the clamp
 		if (0)
@@ -88,8 +88,8 @@ class SwayAnimator
 
 	void Step(const float* view_angles, float dt, float* out_model_angles)
 	{
-		m_sway[0] = Ic::AnglesHolmerMix(-view_angles[0], m_sway[0], AMOUNT[0], dt);
-		m_sway[1] = Ic::AnglesHolmerMix(view_angles[1], m_sway[1], AMOUNT[1], dt);
+		m_sway[0] = Ic::AnglesHolmerMix(m_sway[0], -view_angles[0], AMOUNT[0], dt);
+		m_sway[1] = Ic::AnglesHolmerMix(m_sway[1], view_angles[1], AMOUNT[1], dt);
 
 		m_sway[0] = Ic::ClampAroundCentre(m_sway[0], -view_angles[0], RANGE[0]);
 		m_sway[1] = Ic::ClampAroundCentre(m_sway[1], view_angles[1], RANGE[1]);
@@ -146,12 +146,12 @@ class LeanAnimator
 
 		s3op([&](int i) { temp[i] = velocity[i] / Ic::PLAYER_MAX_SPEED; });
 
-		m_switch1 = Ic::HolmerMix(1.0f, m_switch1, SWITCH_SMOOTH, dt);
-		m_switch2 = Ic::HolmerMix(m_switch1, m_switch2, SWITCH_SMOOTH, dt);
+		m_switch1 = Ic::HolmerMix(m_switch1, 1.0f, SWITCH_SMOOTH, dt);
+		m_switch2 = Ic::HolmerMix(m_switch2, m_switch1, SWITCH_SMOOTH, dt);
 
-		m_lean[0] = Ic::HolmerMix(AMOUNT[0] * Ic::Dot(forward, temp), m_lean[0], SMOOTH, dt) * m_switch2;
-		m_lean[1] = Ic::HolmerMix(AMOUNT[1] * Ic::Dot(right, temp), m_lean[1], SMOOTH, dt);
-		m_lean[2] = Ic::HolmerMix(AMOUNT[2] * Ic::Dot(UP, temp), m_lean[2], SMOOTH, dt);
+		m_lean[0] = Ic::HolmerMix(m_lean[0], AMOUNT[0] * Ic::Dot(forward, temp), SMOOTH, dt) * m_switch2;
+		m_lean[1] = Ic::HolmerMix(m_lean[1], AMOUNT[1] * Ic::Dot(right, temp), SMOOTH, dt);
+		m_lean[2] = Ic::HolmerMix(m_lean[2], AMOUNT[2] * Ic::Dot(UP, temp), SMOOTH, dt);
 
 		// Apply
 		out_model_angles[0] -= m_lean[0];
@@ -177,7 +177,7 @@ class CrouchAnimator
 
 	void Step(int crouch, float dt, float* out_model_z)
 	{
-		m_crouch = Ic::HolmerMix((crouch != 0) ? CROUCH_AMOUNT : 0.0f, m_crouch, CROUCH_SMOOTH, dt);
+		m_crouch = Ic::HolmerMix(m_crouch, (crouch != 0) ? CROUCH_AMOUNT : 0.0f, CROUCH_SMOOTH, dt);
 		*out_model_z += m_crouch;
 	}
 };
@@ -214,7 +214,7 @@ class WalkAnimator
 			speed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
 
 			// Under certain circumstances
-			m_switch = Ic::HolmerMix((on_ground == 0 || speed < 40.0f) ? 0.0f : 1.0f, m_switch, SWITCH_SMOOTH, dt);
+			m_switch = Ic::HolmerMix(m_switch, (on_ground == 0 || speed < 40.0f) ? 0.0f : 1.0f, SWITCH_SMOOTH, dt);
 
 			// Normalised and trough an easing
 			speed = easing_out(speed / Ic::PLAYER_MAX_SPEED) * m_switch * dt;
@@ -306,13 +306,13 @@ class FireAnimator
 		const float angle_tension = (m_angle_flip_flop > 0.0f) ? ANGLE_TENSION[0] : ANGLE_TENSION[1];
 		const float pos_tension = (m_angle_flip_flop > 0.0f) ? POSITION_TENSION[0] : POSITION_TENSION[1];
 
-		m_angle_lp1 = Ic::AnglesHolmerMix(m_angle_flip_flop - m_angle_lp2 * m_feedback, m_angle_lp1, angle_tension, dt);
+		m_angle_lp1 = Ic::AnglesHolmerMix(m_angle_lp1, m_angle_flip_flop - m_angle_lp2 * m_feedback, angle_tension, dt);
 		m_angle_lp1 = Ic::Clamp(m_angle_lp1, 0.0f, 50.0f); // Don't let it go unstable
-		m_angle_lp2 = Ic::AnglesHolmerMix(m_angle_lp1, m_angle_lp2, angle_tension, dt);
+		m_angle_lp2 = Ic::AnglesHolmerMix(m_angle_lp2, m_angle_lp1, angle_tension, dt);
 
-		m_pos_lp1 = Ic::AnglesHolmerMix(m_position_flip_flop - m_pos_lp2 * m_feedback, m_pos_lp1, pos_tension, dt);
+		m_pos_lp1 = Ic::AnglesHolmerMix(m_pos_lp1, m_position_flip_flop - m_pos_lp2 * m_feedback, pos_tension, dt);
 		m_pos_lp1 = Ic::Clamp(m_pos_lp1, -10.0f, 0.0f);
-		m_pos_lp2 = Ic::AnglesHolmerMix(m_pos_lp1, m_pos_lp2, pos_tension, dt);
+		m_pos_lp2 = Ic::AnglesHolmerMix(m_pos_lp2, m_pos_lp1, pos_tension, dt);
 
 		// Apply
 		s3op([&](int i) { out_model_origin[i] += forward[i] * m_pos_lp2; });

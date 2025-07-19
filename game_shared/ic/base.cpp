@@ -51,12 +51,12 @@ float Ic::HolmerMix(float a, float b, float d, float dt)
 {
 	// Freya Holmér. Lerp smoothing is broken. 2024.
 	// https://www.youtube.com/watch?v=LSNQuFEDOyQ
-	return Mix(a, b, static_cast<float>(expf(-d * dt)));
+	return Mix(b, a, static_cast<float>(expf(-d * dt)));
 }
 
 float Ic::AnglesHolmerMix(float a, float b, float d, float dt)
 {
-	return AnglesMix(a, b, static_cast<float>(expf(-d * dt)));
+	return AnglesMix(b, a, static_cast<float>(expf(-d * dt)));
 }
 
 
@@ -77,12 +77,13 @@ uint16_t Ic::Xorshift16(uint16_t x)
 }
 
 uint16_t Ic::Xorshift16(uint16_t* state)
-{    uint16_t x = *state;
-    x ^= x << 7;
-    x ^= x >> 9;
-    x ^= x << 8;
-    *state = x;
-    return x;
+{
+	uint16_t x = *state;
+	x ^= x << 7;
+	x ^= x >> 9;
+	x ^= x << 8;
+	*state = x;
+	return x;
 }
 
 static constexpr float SCALE = 1.0f / 65536.0f;

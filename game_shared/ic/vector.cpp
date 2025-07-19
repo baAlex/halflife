@@ -85,7 +85,7 @@ template <typename T> static T sMix(T a, T b, float f)
 
 template <typename T> static T sHolmerMix(T a, T b, float d, float dt)
 {
-	return Mix(a, b, static_cast<float>(expf(-d * dt)));
+	return Mix(b, a, static_cast<float>(expf(-d * dt)));
 }
 
 template <typename T> static float sLength(T v)
