@@ -50,6 +50,8 @@ struct WeaponProperties
 	const char* event_fire;
 	const char* fire_sound;
 
+	float fire_kick; // TODO, temporary
+
 	// [1] Formula '1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2)' means:
 	// 'accuracy reaches 1 half way the magazine'. One being bad accuracy, two terrible.
 
@@ -178,6 +180,7 @@ class PistolWeapon final : public GeneralizedWeapon
 	    0.0f,                                                         // Pellets dispersion
 	    "events/pistol-fire.sc",                                      // Fire event
 	    "weapons/pistol-fire.wav",                                    // Fire sound
+	    2.0f,                                                         // Fire kick
 	};
 
 	void Initialise();
@@ -217,6 +220,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    350.0f,                                                       // Pellets dispersion
 	    "events/shotgun-fire.sc",                                     // Fire event
 	    "weapons/shotgun-fire.wav",                                   // Fire sound
+	    3.0f,                                                         // Fire kick
 	};
 
 	void Initialise();
@@ -260,6 +264,7 @@ class SmgWeapon final : public GeneralizedWeapon
 	    0.0f,                   // Pellets dispersion
 	    "events/smg-fire.sc",   // Fire event
 	    "weapons/smg-fire.wav", // Fire sound
+	    1.0f,                   // Fire kick
 	};
 
 	void Initialise();
@@ -305,6 +310,7 @@ class ArWeapon final : public GeneralizedWeapon
 	    0.0f,                  // Pellets dispersion
 	    "events/ar-fire.sc",   // Fire event
 	    "weapons/ar-fire.wav", // Fire sound
+	    1.5f,                  // Fire kick
 	};
 
 	void Initialise();
@@ -344,6 +350,7 @@ class RifleWeapon final : public GeneralizedWeapon
 	    0.0f,                                                     // Pellets dispersion
 	    "events/rifle-fire.sc",                                   // Fire event
 	    "weapons/rifle-fire.wav",                                 // Fire sound
+	    4.0f,                                                     // Fire kick
 	};
 
 	void Initialise();

@@ -24,6 +24,8 @@ namespace Ic
 void ViewInitialise();
 void ViewUpdate(struct ref_params_s* input_output);
 
+void ViewFire(float angle_min, float angle_max, float position);
+
 } // namespace Ic
 
 #endif

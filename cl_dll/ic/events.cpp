@@ -25,6 +25,7 @@
 
 #include "pm_defs.h"
 #include "pmtrace.h"
+#include "dlight.h"
 
 #include "events.hpp"
 #include "ic/weapons.hpp"
@@ -33,6 +34,7 @@
 #include "ic/material.hpp"
 #include "ic/particles.hpp"
 #include "ic/fog.hpp"
+#include "ic/view.hpp"
 
 #include <string.h>
 #include <stdint.h>
@@ -154,8 +156,8 @@ Ic::Vector3 sClientSideOrigin(int entity, const float* server_origin, bool serve
 }
 
 
-static void sDoThings(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up,
-                      Ic::Vector3 right, float light_at_impact, int pellets_no)
+static void sPellet(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up,
+                    Ic::Vector3 right, float light_at_impact, int pellets_no)
 {
 	pmtrace_t tr; // Omg, so Quake-ish!
 	float temp1[3];
@@ -254,12 +256,29 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers(entity - 1);
 	gEngfuncs.pEventAPI->EV_SetTraceHull(2);
 
-	//
+
+	const float cp = cosf(Ic::DegToRad(angles[0]));
+	const float sp = sinf(Ic::DegToRad(angles[0]));
+	const float cy = cosf(Ic::DegToRad(angles[1]));
+	const float sy = sinf(Ic::DegToRad(angles[1]));
+	const float forward[3] = {cp * cy, cp * sy, -sp};
+
+	// Animation
+	{
+		// Some value for the Smg model
+		float fire_angle_min = 16.0f * W::PROPS.fire_kick;
+		float angle_max = 32.0f * W::PROPS.fire_kick;
+		float position = 12.0f * W::PROPS.fire_kick;
+
+		Ic::ViewFire(fire_angle_min, angle_max, position);
+	}
+
+	// Pellets logic
 	Ic::WeaponFire(&W::PROPS, {origin[0], origin[1], origin[2]}, {angles[0], angles[1], angles[2]},
 	               static_cast<uint16_t>(seed), rounds_no, accuracy,
 	               [=](Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up, Ic::Vector3 right) //
 	               {                                                                          //
-		               sDoThings(client_side_origin, start, end, up, right, light_at_impact, W::PROPS.pellets_no);
+		               sPellet(client_side_origin, start, end, up, right, light_at_impact, W::PROPS.pellets_no);
 	               });
 
 	// Restore global state thingies
