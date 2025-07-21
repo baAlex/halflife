@@ -22,6 +22,10 @@
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
 
+
+#include "ic/base.hpp"
+
+
 extern cvar_t *tfc_newmodels;
 
 extern extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];
@@ -2031,6 +2035,18 @@ StudioRenderFinal_Software
 
 ====================
 */
+
+float g_muzzle_flash;
+float g_muzzle_angle;
+static float s_zero[4];
+static alight_t s_lighting
+{
+	0,                  // Ambientlight, clip at 128
+	0,                  // Shadelight, clip at 192 - ambientlight
+	{1.0f, 1.0f, 1.0f}, // Colour
+	s_zero,             // Light vector
+};
+
 void CStudioModelRenderer::StudioRenderFinal_Software( void )
 {
 	int i;
@@ -2046,12 +2062,44 @@ void CStudioModelRenderer::StudioRenderFinal_Software( void )
 	{
 		IEngineStudio.StudioDrawHulls( );
 	}
-	else
+	else if (m_pCurrentEntity != gEngfuncs.GetViewModel()) // (baAlex)
 	{
+		// Normal path
 		for (i=0 ; i < m_pStudioHeader->numbodyparts ; i++)
 		{
 			IEngineStudio.StudioSetupModel( i, (void **)&m_pBodyPart, (void **)&m_pSubModel );
 			IEngineStudio.StudioDrawPoints( );
+		}
+	}
+	else
+	{
+		// Viewmodel is all... a topic
+		for (i=0 ; i < m_pStudioHeader->numbodyparts ; i++)
+		{
+			IEngineStudio.StudioSetupModel( i, (void **)&m_pBodyPart, (void **)&m_pSubModel );
+
+			if (i != 0)
+			{
+				s_lighting.shadelight = static_cast<int>(g_muzzle_flash * 192.0f);
+				IEngineStudio.StudioEntityLight( &s_lighting );
+				IEngineStudio.StudioSetupLighting (&s_lighting);
+
+				gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
+
+				// Internally it seems that the engine renders temporary entities with
+				// the TriApi, and it doesn´t restore following value, which is
+				// problematic with new particles
+				gEngfuncs.pTriAPI->Color4f( 1.0f, 1.0f, 1.0f, 1.0f );
+			}
+
+			IEngineStudio.StudioDrawPoints( );
+
+			if (i != 0)
+			{
+				gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
+				g_muzzle_flash = Ic::HolmerMix(g_muzzle_flash, 0.0f, 30.0f, (m_clTime - m_clOldTime));
+				m_pCurrentEntity->curstate.controller[0] = static_cast<byte>(g_muzzle_angle);
+			}
 		}
 	}
 
@@ -2082,18 +2130,22 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware( void )
 	int rendermode;
 
 	rendermode = IEngineStudio.GetForceFaceFlags() ? kRenderTransAdd : m_pCurrentEntity->curstate.rendermode;
-	IEngineStudio.SetupRenderer( rendermode );
-	
+
 	if (m_pCvarDrawEntities->value == 2)
 	{
+		IEngineStudio.SetupRenderer( rendermode );
 		IEngineStudio.StudioDrawBones();
 	}
 	else if (m_pCvarDrawEntities->value == 3)
 	{
+		IEngineStudio.SetupRenderer( rendermode );
 		IEngineStudio.StudioDrawHulls();
 	}
-	else
+	else if (m_pCurrentEntity != gEngfuncs.GetViewModel()) // (baAlex)
 	{
+		// Normal path
+		IEngineStudio.SetupRenderer( rendermode );
+
 		for (i=0 ; i < m_pStudioHeader->numbodyparts ; i++)
 		{
 			IEngineStudio.StudioSetupModel( i, (void **)&m_pBodyPart, (void **)&m_pSubModel );
@@ -2107,6 +2159,45 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware( void )
 			IEngineStudio.GL_SetRenderMode( rendermode );
 			IEngineStudio.StudioDrawPoints();
 			IEngineStudio.GL_StudioDrawShadow();
+		}
+	}
+	else
+	{
+		// Viewmodel
+		for (i=0 ; i < m_pStudioHeader->numbodyparts ; i++)
+		{
+			IEngineStudio.StudioSetupModel( i, (void **)&m_pBodyPart, (void **)&m_pSubModel );
+
+			if (m_fDoInterp)
+			{
+				// interpolation messes up bounding boxes.
+				m_pCurrentEntity->trivial_accept = 0; 
+			}
+
+			if (i != 0)
+			{
+				s_lighting.shadelight = static_cast<int>(g_muzzle_flash * 192.0f);
+				IEngineStudio.StudioEntityLight( &s_lighting );
+				IEngineStudio.StudioSetupLighting (&s_lighting);
+
+				IEngineStudio.SetupRenderer( kRenderTransAdd );
+				IEngineStudio.GL_SetRenderMode( kRenderTransAdd );
+			}
+			else
+			{
+				IEngineStudio.SetupRenderer( rendermode );
+				IEngineStudio.GL_SetRenderMode( rendermode );
+			}
+
+			IEngineStudio.StudioDrawPoints();
+			IEngineStudio.GL_StudioDrawShadow();
+
+			if (i != 0)
+			{
+				gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
+				g_muzzle_flash = Ic::HolmerMix(g_muzzle_flash, 0.0f, 30.0f, (m_clTime - m_clOldTime));
+				m_pCurrentEntity->curstate.controller[0] = static_cast<byte>(g_muzzle_angle);
+			}
 		}
 	}
 

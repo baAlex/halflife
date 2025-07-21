@@ -41,6 +41,8 @@
 
 
 extern engine_studio_api_t IEngineStudio; // Global a la' Valve
+extern float g_muzzle_flash;              // Ditto
+extern float g_muzzle_angle;              // Ditto
 
 
 static void sImpactParticles(const Ic::Material* mat, Ic::Vector3 view_position, Ic::Vector3 position,
@@ -157,7 +159,7 @@ Ic::Vector3 sClientSideOrigin(int entity, const float* server_origin, bool serve
 
 
 static void sPellet(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up,
-                    Ic::Vector3 right, float light_at_impact, int pellets_no)
+                    Ic::Vector3 right, float light_at_impact, int pellets_no, float* barrel_origin)
 {
 	pmtrace_t tr; // Omg, so Quake-ish!
 	float temp1[3];
@@ -201,6 +203,7 @@ static void sPellet(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector
 	else
 	{
 		// We impacted an entity
+
 		sEntityImpact(tr.plane.normal, s, tr.endpos, light_at_impact, pellets_no);
 
 		dev_colour[0] = 0.5f;
@@ -210,9 +213,20 @@ static void sPellet(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector
 
 	// Render tracer
 	// Using 'client_side_start', as is purely for aesthetics reasons
-	temp1[0] = client_side_start.x - up.x * 3.0f + right.x * 1.0f; // TODO, there has to be a better
-	temp1[1] = client_side_start.y - up.y * 3.0f + right.y * 1.0f; // way to determine gun origin
-	temp1[2] = client_side_start.z - up.z * 3.0f + right.z * 1.0f;
+	if (1)
+	{
+		temp1[0] = client_side_start.x - up.x * 2.5f + right.x * 2.5f;
+		temp1[1] = client_side_start.y - up.y * 2.5f + right.y * 2.5f;
+		temp1[2] = client_side_start.z - up.z * 2.5f + right.z * 2.5f;
+	}
+	else
+	{
+		// With the gun swaying around, it looks goofy; also it doesn´t work
+		// in third person, nor in any other client aside local player
+		temp1[0] = barrel_origin[0];
+		temp1[1] = barrel_origin[1];
+		temp1[2] = barrel_origin[2];
+	}
 
 	temp2[0] = temp1[0]; // R_TracerEffect() modifies input, ewww...
 	temp2[1] = temp1[1]; // (TODO, confirm it better)
@@ -239,8 +253,8 @@ static void sPellet(Ic::Vector3 client_side_start, Ic::Vector3 start, Ic::Vector
 
 
 template <typename W>
-static void sGenericEvent(int entity, float* origin, float* angles, bool crouch, float accuracy, int rounds_no,
-                          int seed, float light_at_impact)
+static void sGenericEvent(int entity, float* origin, float* angles, float* barrel_origin, bool crouch, float accuracy,
+                          int rounds_no, int seed, float light_at_impact)
 {
 	Ic::Vector3 client_side_origin = sClientSideOrigin(entity, origin, crouch);
 	origin[2] += static_cast<float>((crouch == false) ? DEFAULT_VIEWHEIGHT
@@ -256,66 +270,109 @@ static void sGenericEvent(int entity, float* origin, float* angles, bool crouch,
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers(entity - 1);
 	gEngfuncs.pEventAPI->EV_SetTraceHull(2);
 
-
-	const float cp = cosf(Ic::DegToRad(angles[0]));
-	const float sp = sinf(Ic::DegToRad(angles[0]));
-	const float cy = cosf(Ic::DegToRad(angles[1]));
-	const float sy = sinf(Ic::DegToRad(angles[1]));
-	const float forward[3] = {cp * cy, cp * sy, -sp};
-
-	// Animation
+	// First person event?
+	if (gEngfuncs.pEventAPI->EV_IsLocal(entity - 1) != 0) // Valve uses that mysterious '-1'
 	{
-		// Some value for the Smg model
-		float fire_angle_min = 16.0f * W::PROPS.fire_kick;
-		float angle_max = 32.0f * W::PROPS.fire_kick;
-		float position = 12.0f * W::PROPS.fire_kick;
+		g_muzzle_angle = Ic::RandomFloat(static_cast<uint16_t>(seed)) * 255.0f;
+		g_muzzle_flash = 0.2f + Ic::RandomFloat(static_cast<uint16_t>(seed + 123)) * 0.8f;
 
-		Ic::ViewFire(fire_angle_min, angle_max, position);
+		// Fire light
+		dlight_t* dl = gEngfuncs.pEfxAPI->CL_AllocDlight(0); // Elights are too bright
+
+		dl->origin[0] = barrel_origin[0];
+		dl->origin[1] = barrel_origin[1];
+		dl->origin[2] = barrel_origin[2];
+
+		dl->color.r = W::PROPS.fire_colour[0];
+		dl->color.g = W::PROPS.fire_colour[1];
+		dl->color.b = W::PROPS.fire_colour[2];
+
+		dl->radius = W::PROPS.fire_colour[3];
+		dl->minlight = 1.0f;
+
+		dl->die = gEngfuncs.GetClientTime() + 0.01f;
 	}
 
 	// Pellets logic
-	Ic::WeaponFire(&W::PROPS, {origin[0], origin[1], origin[2]}, {angles[0], angles[1], angles[2]},
-	               static_cast<uint16_t>(seed), rounds_no, accuracy,
-	               [=](Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up, Ic::Vector3 right) //
-	               {                                                                          //
-		               sPellet(client_side_origin, start, end, up, right, light_at_impact, W::PROPS.pellets_no);
-	               });
+	Ic::WeaponFire(
+	    &W::PROPS, {origin[0], origin[1], origin[2]}, {angles[0], angles[1], angles[2]}, static_cast<uint16_t>(seed),
+	    rounds_no, accuracy, [=](Ic::Vector3 start, Ic::Vector3 end, Ic::Vector3 up, Ic::Vector3 right) //
+	    {                                                                                               //
+		    sPellet(client_side_origin, start, end, up, right, light_at_impact, W::PROPS.pellets_no, barrel_origin);
+	    });
 
 	// Restore global state thingies
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 }
 
 
-void IcEventWeapon1(struct event_args_s* args)
+// ============================
+
+
+struct Queue
 {
-	sGenericEvent<Ic::PistolWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                                args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	static constexpr int MAX_DELAYED_ITEMS = 16;
+
+	event_args_s events[MAX_DELAYED_ITEMS];
+	int cursor;
+};
+
+static Queue s_pistol_queue;
+static Queue s_shotgun_queue;
+static Queue s_smg_queue;
+static Queue s_ar_queue;
+static Queue s_rifle_queue;
+
+/*
+    Protip: I'm delaying events because they need updated variables
+    like player and weapon positions, and, events seems to be received
+    early in the frame while player and weapon thingies are done later.
+    So, the delay is in order to process events after all previous enchilada.
+*/
+
+template <typename W> static void sDoThingie(Queue* q, event_args_s* args)
+{
+	if (q->cursor == Queue::MAX_DELAYED_ITEMS)
+		return;
+	q->events[q->cursor] = *args;
+	q->cursor += 1;
+
+	// First person event?,
+	// we need to tell the view module to animate this weapon
+	if (gEngfuncs.pEventAPI->EV_IsLocal(args->entindex - 1) != 0) // Valve uses that mysterious '-1'
+	{
+		// TODO, temporary constant values suitable for the Smg model
+		float fire_angle_min = 16.0f * W::PROPS.fire_kick;
+		float angle_max = 32.0f * W::PROPS.fire_kick;
+		float position = 12.0f * W::PROPS.fire_kick;
+		Ic::ViewFire(fire_angle_min, angle_max, position);
+	}
 }
 
-void IcEventWeapon2(struct event_args_s* args)
+void IcEventWeapon1(event_args_s* args)
 {
-	sGenericEvent<Ic::ShotgunWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                                 args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	sDoThingie<Ic::PistolWeapon>(&s_pistol_queue, args);
 }
 
-void IcEventWeapon3(struct event_args_s* args)
+void IcEventWeapon2(event_args_s* args)
 {
-	sGenericEvent<Ic::SmgWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                             args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	sDoThingie<Ic::ShotgunWeapon>(&s_shotgun_queue, args);
 }
 
-void IcEventWeapon4(struct event_args_s* args)
+void IcEventWeapon3(event_args_s* args)
 {
-	sGenericEvent<Ic::ArWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1, args->iparam1,
-	                            args->iparam2, args->fparam2 / 255.0f);
+	sDoThingie<Ic::SmgWeapon>(&s_smg_queue, args);
 }
 
-void IcEventWeapon5(struct event_args_s* args)
+void IcEventWeapon4(event_args_s* args)
 {
-	sGenericEvent<Ic::RifleWeapon>(args->entindex, args->origin, args->angles, args->ducking, args->fparam1,
-	                               args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	sDoThingie<Ic::ArWeapon>(&s_ar_queue, args);
 }
 
+void IcEventWeapon5(event_args_s* args)
+{
+	sDoThingie<Ic::RifleWeapon>(&s_rifle_queue, args);
+}
 
 void Ic::HookEvents()
 {
@@ -326,4 +383,84 @@ void Ic::HookEvents()
 	gEngfuncs.pfnHookEvent((char*)(Ic::SmgWeapon::PROPS.event_fire), IcEventWeapon3);
 	gEngfuncs.pfnHookEvent((char*)(Ic::ArWeapon::PROPS.event_fire), IcEventWeapon4);
 	gEngfuncs.pfnHookEvent((char*)(Ic::RifleWeapon::PROPS.event_fire), IcEventWeapon5);
+}
+
+
+void Ic::ProcessEvents()
+{
+	// Retrieve client barrel position
+	float barrel_position[3] = {};
+
+	cl_entity_t* view_model = gEngfuncs.GetViewModel();
+	if (view_model != nullptr)
+	{
+		float end[3];
+
+		// Delayed
+		if (Ic::GetDeveloperLevel() > 1)
+		{
+			barrel_position[0] = view_model->attachment[0][0];
+			barrel_position[1] = view_model->attachment[0][1];
+			barrel_position[2] = view_model->attachment[0][2] + 5.0f;
+
+			end[0] = barrel_position[0];
+			end[1] = barrel_position[1];
+			end[2] = barrel_position[2] + 5.0f;
+
+			gEngfuncs.pEfxAPI->R_ParticleLine(barrel_position, end, 0, 0, 255, 0.1f);
+		}
+
+		// Better
+		// What happens is that 'view_model->attachment' is delayed by one frame, while 'view_model->origin' is not.
+		// Luckily attachments between them are delayed by same amount, so if one of them is positioned in model base,
+		// by subtracting them we get a local space origin, suitable to then add with 'view_model->origin'
+		barrel_position[0] = view_model->origin[0] + (view_model->attachment[0][0] - view_model->attachment[1][0]);
+		barrel_position[1] = view_model->origin[1] + (view_model->attachment[0][1] - view_model->attachment[1][1]);
+		barrel_position[2] = view_model->origin[2] + (view_model->attachment[0][2] - view_model->attachment[1][2]);
+
+		if (Ic::GetDeveloperLevel() > 1)
+		{
+			end[0] = barrel_position[0];
+			end[1] = barrel_position[1];
+			end[2] = barrel_position[2] + 5.0f;
+
+			gEngfuncs.pEfxAPI->R_ParticleLine(barrel_position, end, 255, 0, 0, 0.1f);
+		}
+	}
+
+	// Process all events
+	for (; s_pistol_queue.cursor != 0; s_pistol_queue.cursor -= 1)
+	{
+		event_args_s* args = s_pistol_queue.events + s_pistol_queue.cursor - 1;
+		sGenericEvent<Ic::PistolWeapon>(args->entindex, args->origin, args->angles, barrel_position, args->ducking,
+		                                args->fparam1, args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	}
+
+	for (; s_shotgun_queue.cursor != 0; s_shotgun_queue.cursor -= 1)
+	{
+		event_args_s* args = s_shotgun_queue.events + s_shotgun_queue.cursor - 1;
+		sGenericEvent<Ic::ShotgunWeapon>(args->entindex, args->origin, args->angles, barrel_position, args->ducking,
+		                                 args->fparam1, args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	}
+
+	for (; s_smg_queue.cursor != 0; s_smg_queue.cursor -= 1)
+	{
+		event_args_s* args = s_smg_queue.events + s_smg_queue.cursor - 1;
+		sGenericEvent<Ic::SmgWeapon>(args->entindex, args->origin, args->angles, barrel_position, args->ducking,
+		                             args->fparam1, args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	}
+
+	for (; s_ar_queue.cursor != 0; s_ar_queue.cursor -= 1)
+	{
+		event_args_s* args = s_ar_queue.events + s_ar_queue.cursor - 1;
+		sGenericEvent<Ic::ArWeapon>(args->entindex, args->origin, args->angles, barrel_position, args->ducking,
+		                            args->fparam1, args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	}
+
+	for (; s_rifle_queue.cursor != 0; s_rifle_queue.cursor -= 1)
+	{
+		event_args_s* args = s_rifle_queue.events + s_rifle_queue.cursor - 1;
+		sGenericEvent<Ic::RifleWeapon>(args->entindex, args->origin, args->angles, barrel_position, args->ducking,
+		                               args->fparam1, args->iparam1, args->iparam2, args->fparam2 / 255.0f);
+	}
 }

@@ -49,6 +49,7 @@ float ClampAroundCentre(float x, float centre, float range);
 
 uint16_t Xorshift16(uint16_t x);      // Don't pass a zero, also, function will never return zero
 uint16_t Xorshift16(uint16_t* state); // Don't pass a zero, also, function will never return zero
+float RandomFloat(uint16_t x);        // Don't pass a zero
 float RandomFloat(uint16_t* state);   // Don't pass a zero
 
 } // namespace Ic

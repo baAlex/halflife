@@ -970,6 +970,7 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/fall.wav");
 
 	PRECACHE_MODEL("models/null.mdl");
+	PRECACHE_MODEL("models/v_smg.mdl");
 }
 
 /*

@@ -93,3 +93,9 @@ float Ic::RandomFloat(uint16_t* state)
 	const uint16_t x = Xorshift16(state);
 	return (static_cast<float>(x) * SCALE);
 }
+
+float Ic::RandomFloat(uint16_t state)
+{
+	const uint16_t x = Xorshift16(state);
+	return (static_cast<float>(x) * SCALE);
+}

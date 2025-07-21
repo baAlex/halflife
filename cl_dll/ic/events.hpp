@@ -25,7 +25,10 @@ extern "C" void IcEventWeapon5(struct event_args_s* args);
 
 namespace Ic
 {
+
 void HookEvents();
-}
+void ProcessEvents();
+
+} // namespace Ic
 
 #endif

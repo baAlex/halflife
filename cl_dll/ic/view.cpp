@@ -105,7 +105,7 @@ class SwayAnimator
 class LeanAnimator
 {
 	static constexpr float SWITCH_SMOOTH = 10.0f;
-	static constexpr Ic::Vector3 AMOUNT = {8.0f * 1.0f, 6.0f * 1.5f, 6.0f * 1.0f};
+	static constexpr Ic::Vector3 AMOUNT = {8.0f * 0.75f, 6.0f * 1.5f, 6.0f * 1.0f};
 	static constexpr float SMOOTH = 5.0f;
 	static constexpr Ic::Vector2 CLAMP = {-2.0f, 6.0f};
 
@@ -164,8 +164,8 @@ class LeanAnimator
 
 class CrouchAnimator
 {
-	static constexpr float CROUCH_AMOUNT = 2.0f;
-	static constexpr float CROUCH_SMOOTH = 3.0f;
+	static constexpr float CROUCH_AMOUNT = 1.5f;
+	static constexpr float CROUCH_SMOOTH = 2.5f;
 
 	float m_crouch;
 
@@ -175,10 +175,13 @@ class CrouchAnimator
 		m_crouch = 0.0f;
 	}
 
-	void Step(int crouch, float dt, float* out_model_z)
+	void Step(int crouch, const float* forward, const float* up, float dt, float* out_position)
 	{
 		m_crouch = Ic::HolmerMix(m_crouch, (crouch != 0) ? CROUCH_AMOUNT : 0.0f, CROUCH_SMOOTH, dt);
-		*out_model_z += m_crouch;
+
+		out_position[0] -= forward[0] * m_crouch - up[0] * m_crouch;
+		out_position[1] -= forward[1] * m_crouch - up[1] * m_crouch;
+		out_position[2] -= forward[2] * m_crouch - up[2] * m_crouch;
 	}
 };
 
@@ -186,7 +189,7 @@ class CrouchAnimator
 class WalkAnimator
 {
 	static constexpr float SWITCH_SMOOTH = 3.0f;
-	static constexpr float AMOUNT[2] = {1.25f * 0.3f, 1.25f * 0.4f};
+	static constexpr float AMOUNT[2] = {1.25f * 0.3f * 0.75f, 1.25f * 0.4f * 0.75f};
 	static constexpr float SPEED[2] = {(M_PI * 2.0) / 0.45f, (M_PI * 1.0) / 0.45f};
 
 	float m_switch;
@@ -458,7 +461,8 @@ static void sNormalView(struct ref_params_s* in_out)
 
 		if (1)
 		{
-			s_crouch_animator.Step(in_out->cmd->buttons & IN_DUCK, in_out->frametime, &view_model->origin[2]);
+			s_crouch_animator.Step(in_out->cmd->buttons & IN_DUCK, in_out->forward, in_out->up, in_out->frametime,
+			                       view_model->origin);
 		}
 
 		if (1)

@@ -347,6 +347,13 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 
 	Ic::ViewUpdate(pparams);
 	Ic::FogDraw();
+
+	Ic::ProcessEvents();
+
+	// Force a model
+	int temp;
+	cl_entity_t* view_model = gEngfuncs.GetViewModel();
+	view_model->model = gEngfuncs.CL_LoadModel( "models/v_smg.mdl", &temp);
 }
 
 

@@ -50,7 +50,8 @@ struct WeaponProperties
 	const char* event_fire;
 	const char* fire_sound;
 
-	float fire_kick; // TODO, temporary
+	float fire_kick;        // TODO, temporary
+	uint8_t fire_colour[4]; // Last one being radius
 
 	// [1] Formula '1.0f / static_cast<float>(BEHAVIOUR_PROPS.magazine_size / 2)' means:
 	// 'accuracy reaches 1 half way the magazine'. One being bad accuracy, two terrible.
@@ -181,6 +182,7 @@ class PistolWeapon final : public GeneralizedWeapon
 	    "events/pistol-fire.sc",                                      // Fire event
 	    "weapons/pistol-fire.wav",                                    // Fire sound
 	    2.0f,                                                         // Fire kick
+	    {255, 120, 0, 28},                                            // Fire colour
 	};
 
 	void Initialise();
@@ -221,6 +223,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    "events/shotgun-fire.sc",                                     // Fire event
 	    "weapons/shotgun-fire.wav",                                   // Fire sound
 	    3.0f,                                                         // Fire kick
+	    {255, 120, 0, 28},                                            // Fire colour
 	};
 
 	void Initialise();
@@ -265,6 +268,7 @@ class SmgWeapon final : public GeneralizedWeapon
 	    "events/smg-fire.sc",   // Fire event
 	    "weapons/smg-fire.wav", // Fire sound
 	    1.0f,                   // Fire kick
+	    {255, 120, 0, 28},      // Fire colour
 	};
 
 	void Initialise();
@@ -311,6 +315,7 @@ class ArWeapon final : public GeneralizedWeapon
 	    "events/ar-fire.sc",   // Fire event
 	    "weapons/ar-fire.wav", // Fire sound
 	    1.0f,                  // Fire kick
+	    {172, 255, 0, 28},     // Fire colour
 	};
 
 	void Initialise();
@@ -351,6 +356,7 @@ class RifleWeapon final : public GeneralizedWeapon
 	    "events/rifle-fire.sc",                                   // Fire event
 	    "weapons/rifle-fire.wav",                                 // Fire sound
 	    4.0f,                                                     // Fire kick
+	    {172, 255, 0, 28},                                        // Fire colour
 	};
 
 	void Initialise();
