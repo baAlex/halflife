@@ -431,6 +431,7 @@ static void sNormalView(struct ref_params_s* in_out)
 	// in multiplayer. Is marked as output in 'ref_params_s' tho,
 	// so maybe the engine is using it for render purposes
 	gEngfuncs.pfnAngleVectors(in_out->viewangles, in_out->forward, in_out->right, in_out->up);
+	// Warning, do not replace with Ic::ProperAngleVectors(), this last one doesn't have roll
 
 	// Weapon model
 	cl_entity_t* view_model = gEngfuncs.GetViewModel();

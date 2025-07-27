@@ -49,6 +49,7 @@ struct WeaponProperties
 
 	const char* event_fire;
 	const char* fire_sound;
+	const char* fire_eject;
 
 	float fire_kick;        // TODO, temporary
 	uint8_t fire_colour[4]; // Last one being radius
@@ -181,6 +182,7 @@ class PistolWeapon final : public GeneralizedWeapon
 	    0.0f,                                                         // Pellets dispersion
 	    "events/pistol-fire.sc",                                      // Fire event
 	    "weapons/pistol-fire.wav",                                    // Fire sound
+	    "models/shell.mdl",                                           // Fire eject
 	    2.0f,                                                         // Fire kick
 	    {255, 120, 0, 28},                                            // Fire colour
 	};
@@ -222,6 +224,7 @@ class ShotgunWeapon final : public GeneralizedWeapon
 	    350.0f,                                                       // Pellets dispersion
 	    "events/shotgun-fire.sc",                                     // Fire event
 	    "weapons/shotgun-fire.wav",                                   // Fire sound
+	    "models/shotgunshell.mdl",                                    // Fire eject
 	    3.0f,                                                         // Fire kick
 	    {255, 120, 0, 28},                                            // Fire colour
 	};
@@ -267,6 +270,7 @@ class SmgWeapon final : public GeneralizedWeapon
 	    0.0f,                   // Pellets dispersion
 	    "events/smg-fire.sc",   // Fire event
 	    "weapons/smg-fire.wav", // Fire sound
+	    "models/shell.mdl",     // Fire eject
 	    1.0f,                   // Fire kick
 	    {255, 120, 0, 28},      // Fire colour
 	};
@@ -314,6 +318,7 @@ class ArWeapon final : public GeneralizedWeapon
 	    0.0f,                  // Pellets dispersion
 	    "events/ar-fire.sc",   // Fire event
 	    "weapons/ar-fire.wav", // Fire sound
+	    "models/shell.mdl",    // Fire eject
 	    1.0f,                  // Fire kick
 	    {172, 255, 0, 28},     // Fire colour
 	};
@@ -355,6 +360,7 @@ class RifleWeapon final : public GeneralizedWeapon
 	    0.0f,                                                     // Pellets dispersion
 	    "events/rifle-fire.sc",                                   // Fire event
 	    "weapons/rifle-fire.wav",                                 // Fire sound
+	    "models/shell.mdl",                                       // Fire eject
 	    4.0f,                                                     // Fire kick
 	    {172, 255, 0, 28},                                        // Fire colour
 	};

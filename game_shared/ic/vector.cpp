@@ -10,9 +10,6 @@ This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0.
 */
 
-#include <math.h> // expf(), sqrtf()
-
-#include "base.hpp"
 #include "vector.hpp"
 
 
@@ -25,6 +22,14 @@ template <typename T, int L> static T sOneTwo(float add)
 	add += 1.0f;
 	for (int i = 0; i < L; i += 1)
 		ret[i] = static_cast<float>(i) + add;
+	return ret;
+}
+
+template <typename T, int L> static T sFromPtr(const float* ptr)
+{
+	T ret;
+	for (int i = 0; i < L; i += 1)
+		ret[i] = ptr[i];
 	return ret;
 }
 
@@ -137,7 +142,8 @@ template <typename T, int L> static bool sEqual(T a, T b)
 
 
 // clang-format off
-Vector2 Ic::Vector2::OneTwo(float add) { return sOneTwo<Vector2, 2>(add); }
+Vector2 Ic::Vector2::OneTwo(float add)         { return sOneTwo<Vector2, 2>(add); }
+Vector2 Ic::Vector2::FromPtr(const float* ptr) { return sFromPtr<Vector2, 2>(ptr); };
 
 Vector2 Ic::Add(Vector2 a, Vector2 b)      { return sAdd<Vector2, 2>(a, b); }
 Vector2 Ic::Subtract(Vector2 a, Vector2 b) { return sSubtract<Vector2, 2>(a, b); }
@@ -154,7 +160,8 @@ float   Ic::Dot(Vector2 a, Vector2 b)  { return sDot<Vector2>(a, b); }
 Vector2 Ic::Normalize(Vector2 v)     { return sNormalize<Vector2, 2>(v); }
 bool    Ic::Equal(Vector2 a, Vector2 b) { return sEqual<Vector2, 2>(a, b); }
 
-Vector3 Ic::Vector3::OneTwo(float add) { return sOneTwo<Vector3, 3>(add); }
+Vector3 Ic::Vector3::OneTwo(float add)         { return sOneTwo<Vector3, 3>(add); }
+Vector3 Ic::Vector3::FromPtr(const float* ptr) { return sFromPtr<Vector3, 3>(ptr); };
 
 Vector3 Ic::Add(Vector3 a, Vector3 b)      { return sAdd<Vector3, 3>(a, b); }
 Vector3 Ic::Subtract(Vector3 a, Vector3 b) { return sSubtract<Vector3, 3>(a, b); }
@@ -171,7 +178,8 @@ float   Ic::Dot(Vector3 a, Vector3 b)  { return sDot<Vector3>(a, b); }
 Vector3 Ic::Normalize(Vector3 v)     { return sNormalize<Vector3, 3>(v); }
 bool    Ic::Equal(Vector3 a, Vector3 b) { return sEqual<Vector3, 3>(a, b); }
 
-Vector4 Ic::Vector4::OneTwo(float add) { return sOneTwo<Vector4, 4>(add); }
+Vector4 Ic::Vector4::OneTwo(float add)         { return sOneTwo<Vector4, 4>(add); }
+Vector4 Ic::Vector4::FromPtr(const float* ptr) { return sFromPtr<Vector4, 4>(ptr); };
 
 Vector4 Ic::Add(Vector4 a, Vector4 b)      { return sAdd<Vector4, 4>(a, b); }
 Vector4 Ic::Subtract(Vector4 a, Vector4 b) { return sSubtract<Vector4, 4>(a, b); }

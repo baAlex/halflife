@@ -348,7 +348,7 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 	Ic::ViewUpdate(pparams);
 	Ic::FogDraw();
 
-	Ic::ProcessEvents();
+	Ic::ProcessEvents(pparams->simvel);
 
 	// Force a model
 	int temp;

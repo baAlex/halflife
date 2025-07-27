@@ -274,42 +274,7 @@ void Ic::WeaponFire(const Ic::WeaponProperties* props, Ic::Vector3 origin, Ic::V
 	Vector3 up;
 	Vector3 end;
 
-	{
-		// Creating a common sense AngleVectors():
-
-		// forward.x = cos(v.x) * cos(v.y);
-		// forward.y = cos(v.x) * sin(v.y);
-		// forward.z = -sin(v.x);
-
-		// right.x = cos(v.x) * cos(v.y - (M_PI / 2.0)); // Or '-90' in degrees
-		// right.y = cos(v.x) * sin(v.y - (M_PI / 2.0));
-		// right.z = -sin(v.x);
-
-		// up.x = cos(v.x - (M_PI / 2.0)) * cos(v.y);
-		// up.y = cos(v.x - (M_PI / 2.0)) * sin(v.y);
-		// up.z = -sin(v.x - (M_PI / 2.0));
-
-		// And since 'cos(x - pi / 2) = sin(x)' and 'sin(x - pi / 2) = -cos(x)',
-		// we get:
-
-		const float cp = cosf(DegToRad(view_angle[0]));
-		const float sp = sinf(DegToRad(view_angle[0]));
-		const float cy = cosf(DegToRad(view_angle[1]));
-		const float sy = sinf(DegToRad(view_angle[1]));
-
-		// clang-format off
-		forward = {cp * cy, cp  * sy, -sp};
-		right =   {cp * sy, -cp * cy, -sp};
-		up =      {sp * cy, sp  * sy, cp};
-		// clang-format on
-
-		// According to internet I stumbled into a roll-less form of "Direction Cosine
-		// Matrix (DCM)"... should work tho. Lets see for how long this code survives.
-
-		// PS: And if I add back roll, it basically morphs into a rotation matrix with
-		// a coordinate system and euler order that I'm not used to. Same old thing
-		// that we all known.
-	}
+	Ic::ProperAngleVectors(view_angle, &forward, &right, &up);
 
 	// Iterate rounds
 	for (int r = 0; r < rounds_no; r += 1)

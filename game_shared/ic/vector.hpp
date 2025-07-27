@@ -13,6 +13,9 @@ defined by the Mozilla Public License, v. 2.0.
 #ifndef IC_VECTOR_HPP
 #define IC_VECTOR_HPP
 
+#include "base.hpp"
+#include <math.h> // expf(), sqrtf(), sinf(), cosf()
+
 namespace Ic
 {
 
@@ -22,6 +25,7 @@ struct Vector2
 	float y;
 
 	static Vector2 OneTwo(float add = 0.0f);
+	static Vector2 FromPtr(const float* ptr);
 
 	inline float& operator[](int index)
 	{
@@ -41,6 +45,7 @@ struct Vector3
 	float z;
 
 	static Vector3 OneTwo(float add = 0.0f);
+	static Vector3 FromPtr(const float* ptr);
 
 	// clang-format off
 	inline float& operator[](int index)
@@ -67,6 +72,7 @@ struct Vector4
 	float w;
 
 	static Vector4 OneTwo(float add = 0.0f);
+	static Vector4 FromPtr(const float* ptr);
 
 	// clang-format off
 	inline float& operator[](int index)
@@ -136,6 +142,89 @@ bool Equal(Vector4 a, Vector4 b);
 
 Vector2 Xy(Vector4 v);
 Vector3 Xyz(Vector4 v);
+
+inline void ProperAngleVectors(Vector3 a, Vector3* forward, Vector3* right, Vector3* up)
+{
+	// Mathematically identical to AngleVectors() in 'pm_math.c'
+
+#if 1
+	// Roll-less version of below Wikipedia copy
+
+	const float sp = sinf(Ic::DegToRad(a.x));
+	const float cp = cosf(Ic::DegToRad(a.x));
+	const float sy = sinf(Ic::DegToRad(a.y));
+	const float cy = cosf(Ic::DegToRad(a.y));
+
+	if (forward != nullptr)
+	{
+		forward->x = cy * cp;
+		forward->y = sy * cp;
+		forward->z = -sp;
+	}
+
+	if (right != nullptr)
+	{
+		right->x = sy;
+		right->y = -cy;
+		right->z = 0.0f;
+	}
+
+	if (up != nullptr)
+	{
+		up->x = cy * sp;
+		up->y = sy * sp;
+		up->z = cp;
+	}
+#else
+	// Mostly a copy-paste from Wikipedia:
+	// Rotation formalisms, Euler angles (z-y′-x″ intrinsic) → rotation matrix
+	// https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions#Euler_angles_(z-y%E2%80%B2-x%E2%80%B3_intrinsic)_%E2%86%92_rotation_matrix
+
+	const float sp = sinf(Ic::DegToRad(a.x));
+	const float cp = cosf(Ic::DegToRad(a.x));
+	const float sy = sinf(Ic::DegToRad(a.y));
+	const float cy = cosf(Ic::DegToRad(a.y));
+	const float sr = sinf(Ic::DegToRad(a.z));
+	const float cr = cosf(Ic::DegToRad(a.z));
+
+	if (forward != nullptr)
+	{
+		forward->x = cy * cp;
+		forward->y = sy * cp;
+		forward->z = -sp;
+	}
+
+	if (right != nullptr)
+	{
+		// Different from Wikipedia:
+		right->x = -(-sy * cr + cy * sp * sr);
+		right->y = -(cy * cr + sy * sp * sr);
+		right->z = -(cp * sr);
+	}
+
+	if (up != nullptr)
+	{
+		up->x = sy * sr + cy * sp * cr;
+		up->y = -cy * sr + sy * sp * cr;
+		up->z = cp * cr;
+	}
+#endif
+}
+
+inline void BrokenAngleVectors(Vector3 a, Vector3* forward, Vector3* right, Vector3* up)
+{
+	// This bug is inherited from Quake's vectoangles(), which returns a negated pitch
+	// (https://quakewiki.org/wiki/vectoangles)
+
+	// Meaning that buggy angles feed to AngleVectors() will not work. The bug doesn´t
+	// stop there tho, is easy to live with funky coordinates, the real problem is its
+	// consistency. Since is a relatively easy to fix bug, it's fixed in some parts of
+	// the codebase but not in others. And oh poor me, is painful to follow.
+
+	a.x = -a.x; // Fix. A negated value is all what it takes, and code here and
+	            // there was written with or without this prevision.
+	return ProperAngleVectors(a, forward, right, up);
+}
 
 } // namespace Ic
 

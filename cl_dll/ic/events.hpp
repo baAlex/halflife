@@ -27,7 +27,7 @@ namespace Ic
 {
 
 void HookEvents();
-void ProcessEvents();
+void ProcessEvents(float* velocity);
 
 } // namespace Ic
 
