@@ -1247,6 +1247,7 @@ void PM_WalkMove ()
 
 	wishvel[0] = cosf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + cosf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
 	wishvel[1] = sinf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + sinf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
+	wishvel[2] = 0.0f;
 #endif
 
 	VectorCopy (wishvel, wishdir);   // Determine maginitude of speed of move
