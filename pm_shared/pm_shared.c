@@ -1227,19 +1227,23 @@ void PM_WalkMove ()
 	
 	wishvel[2] = 0;             // Zero out z part of velocity
 #else
-	// This solves a weird precision error where, when looking to the floor and quickly walk
-	// alternating between left and right strides, player will move backwards as well. And forward
+	// This solves a weird precision error where, when looking at the floor and quickly walking
+	// alternating between left and right strides, player moves backwards as well. And forward
 	// if looking up.
 
-	// Rather than doing a dubious normalization I'm doing a 2d rotation. Btw, why Carmack did
-	// that?, what was the idea of decompose an angle into forward and right vectors to then compose
-	// them again in 'whisvel'? [a][b]
+	// Rather than doing a dubious normalisation after removing a component I'm doing a 2d rotation.
+	// Btw, why Carmack did that?, what was the point of decompose an angle into forward and right
+	// vectors to then compose them again in 'whisvel'? [a][b][c]
 
-	// Fun fact, I love how my humour changed between this comment and previous one, what
-	// dealing for two months with video game code do to a man.
+	// Fun fact, I love how my humour changed between this comment and previous one.
+	// That’s what dealing with video game code does to a man.
 
-	// [a] https://github.com/id-Software/Quake-2/blob/372afde46e7defc9dd2d719a1732b8ace1fa096e/qcommon/pmove.c#L575
-	// [b] https://github.com/id-Software/Quake-III-Arena/blob/dbe4ddb10315479fc00086f08e25d968b4b43c49/code/game/bg_pmove.c#L692
+	// [a] https://github.com/id-Software/Quake/blob/bf4ac424ce754894ac8f1dae6a3981954bc9852d/QW/client/pmove.c#L504
+	// [b] https://github.com/id-Software/Quake-2/blob/372afde46e7defc9dd2d719a1732b8ace1fa096e/qcommon/pmove.c#L575
+	// [c] https://github.com/id-Software/Quake-III-Arena/blob/dbe4ddb10315479fc00086f08e25d968b4b43c49/code/game/bg_pmove.c#L692
+
+	// (in defense of Quake 2, normalisation is commented out, so it yields something similar to a
+	// 2d rotation, but Quake 3 is wrong again)
 
 	wishvel[0] = cosf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + cosf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
 	wishvel[1] = sinf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + sinf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
