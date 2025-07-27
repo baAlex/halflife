@@ -670,7 +670,7 @@ void IcPlayMaterialSound(float volume)
 	{
 		for (const char* c = texture_name; c != 0x00 && c < texture_name + 3; c += 1) // Yes, up to 3 characters
 		{
-			if (*c == '#')
+			if (*c == '.')
 				break;
 			// else if (*c == 'c')
 			// 	sound_set = s_concrete_sound;
@@ -1148,7 +1148,7 @@ void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 
 	// Lil' code snippet that hopefully falls under public domain
 	// (by virtue of being short). This bit was in the code, but
-	// disabled, it never saw the light of day. It has no mercy for
+	// disabled it never saw the light of day. It has no mercy for
 	// momentum so is lovely for ground movement (it feels responsive).
 
 	// And since you're reading this, let me inform you that this
@@ -1213,7 +1213,8 @@ void PM_WalkMove ()
 	// Copy movement amounts
 	fmove = pmove->cmd.forwardmove;
 	smove = pmove->cmd.sidemove;
-	
+
+#if 0 // (baAlex)
 	// Zero out z components of movement vectors
 	pmove->forward[2] = 0;
 	pmove->right[2]   = 0;
@@ -1225,6 +1226,24 @@ void PM_WalkMove ()
 		wishvel[i] = pmove->forward[i]*fmove + pmove->right[i]*smove;
 	
 	wishvel[2] = 0;             // Zero out z part of velocity
+#else
+	// This solves a weird precision error where, when looking to the floor and quickly walk
+	// alternating between left and right strides, player will move backwards as well. And forward
+	// if looking up.
+
+	// Rather than doing a dubious normalization I'm doing a 2d rotation. Btw, why Carmack did
+	// that?, what was the idea of decompose an angle into forward and right vectors to then compose
+	// them again in 'whisvel'? [a][b]
+
+	// Fun fact, I love how my humour changed between this comment and previous one, what
+	// dealing for two months with video game code do to a man.
+
+	// [a] https://github.com/id-Software/Quake-2/blob/372afde46e7defc9dd2d719a1732b8ace1fa096e/qcommon/pmove.c#L575
+	// [b] https://github.com/id-Software/Quake-III-Arena/blob/dbe4ddb10315479fc00086f08e25d968b4b43c49/code/game/bg_pmove.c#L692
+
+	wishvel[0] = cosf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + cosf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
+	wishvel[1] = sinf(pmove->angles[1] * (M_PI * 2.0f / 360.0f)) * fmove + sinf((pmove->angles[1] - 90.0f) * (M_PI * 2.0f / 360.0f)) * smove;
+#endif
 
 	VectorCopy (wishvel, wishdir);   // Determine maginitude of speed of move
 	wishspeed = VectorNormalize(wishdir);

@@ -113,7 +113,7 @@ const Ic::Material* Ic::GetMaterial(const char* texture_name, bool* do_decals)
 	bool lad_found = false;
 	for (const char* c = texture_name; c != 0x00 && c < texture_name + 3; c += 1) // Yes, up to 3 characters
 	{
-		if (*c == '#') // This lad
+		if (*c == '.') // This lad
 		{
 			lad_found = true;
 			break;
