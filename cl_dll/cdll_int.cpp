@@ -41,7 +41,7 @@ extern "C"
 #include "winsani_out.h"
 #endif
 #include "Exports.h"
-#
+
 #include "tri.h"
 #include "vgui_TeamFortressViewport.h"
 #include "../public/interface.h"
@@ -59,6 +59,7 @@ extern "C"
 #include "ic/events.hpp"
 #include "ic/fog.hpp"
 #include "ic/particles.hpp"
+#include "ic/experiments.hpp"
 
 
 static Ic::Accuracy s_client_side_accuracy;
@@ -349,6 +350,8 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 	Ic::FogDraw();
 
 	Ic::ProcessEvents(pparams->simvel);
+
+	Ic::Experiments(pparams);
 
 	// Force a model
 	int temp;
