@@ -16,7 +16,7 @@
 #include "Exports.h"
 
 
-#include "ic/particles.hpp"
+#include "ic/temp-entities.hpp"
 
 
 #include "particleman.h"
@@ -312,7 +312,7 @@ void CL_DLLEXPORT HUD_CreateEntities( void )
 {
 //	RecClCreateEntities();
 
-	Ic::ParticlesEntities();
+	Ic::UpdateTempEntities();
 
 #if defined( BEAM_TEST )
 	Beams();

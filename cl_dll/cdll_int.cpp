@@ -60,6 +60,7 @@ extern "C"
 #include "ic/fog.hpp"
 #include "ic/particles.hpp"
 #include "ic/experiments.hpp"
+#include "ic/temp-entities.hpp"
 
 
 static Ic::Accuracy s_client_side_accuracy;
@@ -206,6 +207,7 @@ int CL_DLLEXPORT HUD_VidInit( void )
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
 	Ic::ParticlesInitialise();
+	Ic::InitialiseTempEntities();
 
 	s_client_side_accuracy.Initialise();
 
@@ -234,6 +236,7 @@ void CL_DLLEXPORT HUD_Init( void )
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
 	Ic::ParticlesInitialise();
+	Ic::InitialiseTempEntities();
 
 	s_client_side_accuracy.Initialise();
 }
@@ -301,6 +304,7 @@ void CL_DLLEXPORT HUD_Reset( void )
 	Ic::ViewInitialise();
 	Ic::FogInitialise();
 	Ic::ParticlesInitialise();
+	Ic::InitialiseTempEntities();
 
 	s_client_side_accuracy.Initialise();
 }

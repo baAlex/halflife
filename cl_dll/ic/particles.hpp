@@ -19,9 +19,8 @@ namespace Ic
 {
 
 void ParticlesInitialise();
-void ParticlesEntities();
-
-void DustParticles(int number, Vector3 position, Vector3 force, float gravity, Vector4 colour);
+void DustParticles(int number, Vector3 position, Vector3 force, float gravity, Vector4 colour, float randomness = 1.0f);
+void ShellParticle(int type, Vector3 position, Vector3 force, Vector3 angle);
 
 } // namespace Ic
 

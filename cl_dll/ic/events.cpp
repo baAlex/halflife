@@ -301,7 +301,6 @@ static void sGenericEvent(int entity, float* origin, float* angles, float* muzzl
 		dl->die = gEngfuncs.GetClientTime() + 0.01f;
 
 		// Eject shell
-		if (W::PROPS.fire_eject != nullptr)
 		{
 			cl_entity_t* player = gEngfuncs.GetLocalPlayer();
 			cl_entity_t* view_model = gEngfuncs.GetViewModel();
@@ -309,7 +308,7 @@ static void sGenericEvent(int entity, float* origin, float* angles, float* muzzl
 			Ic::Vector3 forward;
 			Ic::Vector3 right;
 			Ic::Vector3 up;
-			Ic::ProperAngleVectors(Ic::Vector3::FromPtr(view_model->angles), &forward, &right, &up);
+			Ic::BrokenAngleVectors(Ic::Vector3::FromPtr(view_model->angles), &forward, &right, &up);
 
 			auto f = -Ic::RandomFloat(&s) * 32.0f;
 			auto r = Ic::RandomFloat(&s) * 64.0f + 64.0f;
@@ -319,8 +318,15 @@ static void sGenericEvent(int entity, float* origin, float* angles, float* muzzl
 			right[1] = forward[1] * f + right[1] * r + up[1] * u + player_velocity[1];
 			right[2] = forward[2] * f + right[2] * r + up[2] * u + player_velocity[2];
 
-			auto shell = gEngfuncs.pEventAPI->EV_FindModelIndex(W::PROPS.fire_eject);
-			gEngfuncs.pEfxAPI->R_TempModel(eject_origin, &right.x, view_model->angles, 2.5f, shell, TE_BOUNCE_SHELL);
+			Ic::ShellParticle(W::PROPS.fire_eject, Ic::Vector3::FromPtr(eject_origin), right,
+			                  Ic::Vector3::FromPtr(view_model->angles));
+
+			// Vapour
+			right[0] = up[0] * 32.0f + player_velocity[0];
+			right[1] = up[1] * 32.0f + player_velocity[1];
+			right[2] = up[2] * 32.0f + player_velocity[2];
+
+			Ic::DustParticles(1, Ic::Vector3::FromPtr(muzzle_origin), right, 0.0f, {1.0f, 1.0f, 1.0f, 0.05f}, 0.25f);
 		}
 	}
 

@@ -38,7 +38,7 @@ static constexpr Ic::Material GENERIC_MATERIAL = {
     GENERIC_IMPACT_COLOUR,       // Impact colour
     6,                           // Impact particles number
     256.0f,                      // Impact particles force
-    -0.5f,                       // Impact particles gravity
+    -0.5f * 64.0f,               // Impact particles gravity
 };
 
 static constexpr Ic::Material CONCRETE_MATERIAL = {
@@ -48,7 +48,7 @@ static constexpr Ic::Material CONCRETE_MATERIAL = {
     GENERIC_IMPACT_COLOUR,        // Impact colour
     6,                            // Impact particles number
     256.0f,                       // Impact particles force
-    -0.5f,                        // Impact particles gravity
+    -0.5f * 64.0f,                // Impact particles gravity
 };
 
 static constexpr Ic::Material METAL_MATERIAL = {
@@ -58,7 +58,7 @@ static constexpr Ic::Material METAL_MATERIAL = {
     {0.18f, 0.18f, 0.12f, 0.12f}, // Impact colour
     3,                            // Impact particles number
     256.0f,                       // Impact particles force
-    -0.5f,                        // Impact particles gravity
+    -0.5f * 64.0f,                // Impact particles gravity
 };
 
 static constexpr Ic::Material WOOD_MATERIAL = {
@@ -68,7 +68,7 @@ static constexpr Ic::Material WOOD_MATERIAL = {
     {0.59f, 0.45f, 0.29f, 0.37f}, // Impact colour
     3,                            // Impact particles number
     256.0f,                       // Impact particles force
-    -4.0f,                        // Impact particles gravity
+    -4.0f * 64.0f,                // Impact particles gravity
 };
 
 static constexpr Ic::Material DIRT_MATERIAL = {
@@ -78,7 +78,7 @@ static constexpr Ic::Material DIRT_MATERIAL = {
     {0.61f, 0.58f, 0.47f, 0.5f}, // Impact colour
     8,                           // Impact particles number
     256.0f,                      // Impact particles force
-    -1.0f,                       // Impact particles gravity
+    -1.0f * 64.0f,               // Impact particles gravity
 };
 
 static constexpr Ic::Material SNOW_MATERIAL = {
@@ -88,7 +88,7 @@ static constexpr Ic::Material SNOW_MATERIAL = {
     {1.0f, 1.0f, 1.0f, 0.58f}, // Impact colour
     8,                         // Impact particles number
     256.0f,                    // Impact particles force
-    -4.0f,                     // Impact particles gravity
+    -4.0f * 64.0f,             // Impact particles gravity
 };
 
 static constexpr Ic::Material FLESH_MATERIAL = {
@@ -98,7 +98,7 @@ static constexpr Ic::Material FLESH_MATERIAL = {
     {0.6f, 0.05f, 0.05f, 0.4f}, // Impact colour
     4,                          // Impact particles number
     64.0f,                      // Impact particles force
-    -4.0f,                      // Impact particles gravity
+    -4.0f * 64.0f,              // Impact particles gravity
 };
 
 

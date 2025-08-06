@@ -20,9 +20,14 @@
 #include "parsemsg.h"
 #include "com_model.h"
 
+#include "event_api.h"
+#include "pm_defs.h"
+#include "pmtrace.h"
+
 #include "messages.hpp"
 #include "ic/base.hpp"
 #include "ic/weapons.hpp"
+#include "ic/temp-entities.hpp"
 
 #include <string.h>
 
@@ -105,7 +110,7 @@ void Ic::MessagesInitialise()
 
 void Ic::MessagesSoftInitialise()
 {
-	s_world_updated = 0;
+	s_world_updated = 0; // TODO, FIXME maybe, does this work at levels transition?
 
 	s_health = 0.0f;
 	s_accuracy[0] = 0.0f;
@@ -190,6 +195,133 @@ const Ic::WorldProperties* Ic::GetWorldProperties()
 	return &s_world_p;
 }
 
+
+template <typename C1, typename C2>
+static void sParsieMcParserFace(char* data, C1 entity_field_callback, C2 entity_end_callback)
+{
+	// Mostly a copy of UTIL_FindEntityInMap(), 'cl_dll/hud_spectator.cpp'
+
+	char token[1024];  // Length number courtesy of Valve
+	char keyname[256]; // Ditto
+
+	for (; data != nullptr;)
+	{
+		data = gEngfuncs.COM_ParseFile(data, token);
+
+		if ((token[0] == '}') || (token[0] == 0))
+			break;
+
+		if (data == nullptr)
+		{
+			gEngfuncs.Con_Printf("Ic::sParsieMcParserFace(), EOF without closing brace\n");
+			return;
+		}
+
+		if (token[0] != '{')
+		{
+			gEngfuncs.Con_Printf("Ic::sParsieMcParserFace(), expected {\n");
+			return;
+		}
+
+		// Now parse entities properties
+		while (1)
+		{
+			// Key
+			data = gEngfuncs.COM_ParseFile(data, token);
+
+			if (data == nullptr)
+			{
+				gEngfuncs.Con_Printf("Ic::sParsieMcParserFace(), EOF without closing brace\n");
+				return;
+			}
+
+			if (token[0] == '}')
+			{
+				entity_end_callback();
+				break; // Finish parsing this entity
+			}
+
+			strcpy(keyname, token);
+
+			// Hack to fix keynames with trailing spaces
+			size_t n = strlen(keyname);
+			while (n != 0 && keyname[n - 1] == ' ')
+			{
+				keyname[n - 1] = 0;
+				n--;
+			}
+
+			// Parse value
+			data = gEngfuncs.COM_ParseFile(data, token);
+
+			if (data == nullptr)
+			{
+				gEngfuncs.Con_Printf("Ic::sParsieMcParserFace(), EOF without closing brace\n");
+				return;
+			}
+
+			if (token[0] == '}')
+			{
+				gEngfuncs.Con_Printf("Ic::sParsieMcParserFace(), closing brace without data");
+				return;
+			}
+
+			// Tell outside code about
+			entity_field_callback(keyname, token);
+		}
+	}
+}
+
+
+struct DevCommentary
+{
+	Ic::Vector3 initial_position;
+
+	static void CreateCallback(float dt, void* user_data, cl_entity_t* entity)
+	{
+		DevCommentary* self = reinterpret_cast<DevCommentary*>(user_data);
+
+		// Calculate 48 units from floor, just to keep uniformity
+		{
+			pmtrace_t tr;
+
+			Ic::Vector3 end = self->initial_position;
+			end[2] -= 64;
+
+			gEngfuncs.pEventAPI->EV_PushPMStates();
+			gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+			gEngfuncs.pEventAPI->EV_PlayerTrace((float*)(&self->initial_position.x), (float*)(&end.x), PM_NORMAL, -1,
+			                                    &tr);
+			gEngfuncs.pEventAPI->EV_PopPMStates();
+
+			self->initial_position.z = tr.endpos[2] + 48.0f;
+		}
+
+		// Set
+		entity->origin[0] = self->initial_position.x;
+		entity->origin[1] = self->initial_position.y;
+		entity->origin[2] = self->initial_position.z;
+
+		int temp;
+		entity->model = gEngfuncs.CL_LoadModel("models/commentary.mdl", &temp);
+	}
+
+	static int UpdateCallback(float dt, void* user_data, cl_entity_t* entity)
+	{
+		DevCommentary* self = reinterpret_cast<DevCommentary*>(user_data);
+		entity->curstate.angles[1] = fmodf(entity->curstate.angles[1] + 128.0f * dt, 360.0f);
+		return 0;
+	}
+};
+
+
+static Ic::Vector3 sStringToVector3(const char* string)
+{
+	int temp[3];
+	sscanf(string, "%i %i %i", &temp[0], &temp[1], &temp[2]);
+	return {static_cast<float>(temp[0]), static_cast<float>(temp[1]), static_cast<float>(temp[2])};
+}
+
 const void Ic::ParseWorldProperties()
 {
 	if (s_world_updated == 1)
@@ -199,8 +331,6 @@ const void Ic::ParseWorldProperties()
 	gEngfuncs.Con_Printf("### Ic::ParseWorldProperties()\n");
 
 	// ----
-	// Mostly a copy of UTIL_FindEntityInMap(), 'cl_dll/hud_spectator.cpp'
-
 	// Btw, makes more sense to parse world at any of the Initialise() functions,
 	// however those are called before the level is actually loaded.
 
@@ -214,114 +344,92 @@ const void Ic::ParseWorldProperties()
 	if (world_entity == nullptr)
 		return;
 
-	for (char* data = world_entity->model->entities; data != nullptr;)
+	// Create developer commentaries
 	{
-		data = gEngfuncs.COM_ParseFile(data, token);
+		bool found = false;
+		Ic::Vector3 position = {};
+		char commentary[1024] = {};
 
-		if ((token[0] == '}') || (token[0] == 0))
-			break;
+		sParsieMcParserFace(
+		    world_entity->model->entities,
+		    [&](const char* key, const char* value)
+		    {
+			    // gEngfuncs.Con_Printf("### Ic::EntityField: '%s' : '%s'\n", key, value);
 
-		if (data == nullptr)
-		{
-			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-			return;
-		}
+			    if (strcmp(key, "classname") == 0 && strcmp(value, "info_dev_message") == 0)
+				    found = true;
+			    if (strcmp(key, "message") == 0)
+				    strncpy(commentary, value, 1024);
+			    if (strcmp(key, "origin") == 0)
+				    position = sStringToVector3(value);
+		    },
+		    [&]()
+		    {
+			    // gEngfuncs.Con_Printf("### Ic::EntityEnds\n");
 
-		if (token[0] != '{')
-		{
-			gEngfuncs.Con_Printf("Ic::GetWorldProperties(), expected {\n");
-			return;
-		}
+			    if (found == true)
+			    {
+				    DevCommentary dev_commentary;
+				    dev_commentary.initial_position = position;
 
-		// Now parse entities properties
-		while (1)
-		{
-			// Key
-			data = gEngfuncs.COM_ParseFile(data, token);
+				    Ic::CreateTempEntity(Ic::TempEntityType::Normal, DevCommentary::CreateCallback,
+				                         DevCommentary::UpdateCallback, sizeof(DevCommentary), &dev_commentary);
 
-			if (token[0] == '}')
-				break; // Finish parsing this entity
+				    position = {0};
+				    commentary[0] = 0;
+			    }
 
-			if (data == nullptr)
-			{
-				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-				return;
-			}
+			    found = false;
+		    });
+	}
 
-			strcpy(keyname, token);
+	// Retrieve fog values
+	{
+		bool found = false;
+		Ic::Vector3 colour1 = {};
+		Ic::Vector3 colour2 = {};
+		float density = {};
+		float angle = {};
 
-			// Hack to fix keynames with trailing spaces
-			size_t n = strlen(keyname);
-			while (n != 0 && keyname[n - 1] == ' ')
-			{
-				keyname[n - 1] = 0;
-				n--;
-			}
+		sParsieMcParserFace(
+		    world_entity->model->entities,
+		    [&](const char* key, const char* value)
+		    {
+			    if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
+				    found = true;
+			    if (strcmp(key, "fog_colour1") == 0)
+				    colour1 = sStringToVector3(value);
+			    if (strcmp(key, "fog_colour2") == 0)
+				    colour2 = sStringToVector3(value);
+			    if (strcmp(key, "fog_density") == 0)
+				    density = static_cast<float>(atof(value));
+			    if (strcmp(key, "fog_angle") == 0)
+				    angle = static_cast<float>(atof(value));
+		    },
+		    [&]()
+		    {
+			    if (found == true)
+			    {
+				    gEngfuncs.Con_Printf("### fog_colour1 = %f, %f, %f\n", colour1[0], colour1[1], colour1[2]);
+				    gEngfuncs.Con_Printf("### fog_colour2 = %f, %f, %f\n", colour2[0], colour2[1], colour2[2]);
+				    gEngfuncs.Con_Printf("### fog_density = %f\n", density);
+				    gEngfuncs.Con_Printf("### fog_angle = %f\n", angle);
 
-			// Parse values
-			data = gEngfuncs.COM_ParseFile(data, token);
+				    new_p.fog_colour1[0] = static_cast<float>(colour1[0]) / 255.0f;
+				    new_p.fog_colour1[1] = static_cast<float>(colour1[1]) / 255.0f;
+				    new_p.fog_colour1[2] = static_cast<float>(colour1[2]) / 255.0f;
 
-			if (data == nullptr)
-			{
-				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), EOF without closing brace\n");
-				return;
-			}
+				    new_p.fog_colour2[0] = static_cast<float>(colour2[0]) / 255.0f;
+				    new_p.fog_colour2[1] = static_cast<float>(colour2[1]) / 255.0f;
+				    new_p.fog_colour2[2] = static_cast<float>(colour2[2]) / 255.0f;
 
-			if (token[0] == '}')
-			{
-				gEngfuncs.Con_Printf("Ic::GetWorldProperties(), closing brace without data");
-				return;
-			}
+				    new_p.fog_density = density;
+				    new_p.fog_angle = angle;
 
-			if (strcmp(keyname, "classname") == 0)
-			{
-				if (strcmp(token, "worldspawn") == 0)
-				{
-					found = true; // That's our entity
-				}
-			}
+				    s_world_p = new_p;
+			    }
 
-			if (strcmp(keyname, "fog_colour1") == 0)
-			{
-				int temp[3] = {};
-				sscanf(token, "%i %i %i", &temp[0], &temp[1], &temp[2]);
-
-				new_p.fog_colour1[0] = static_cast<float>(temp[0]) / 255.0f;
-				new_p.fog_colour1[1] = static_cast<float>(temp[1]) / 255.0f;
-				new_p.fog_colour1[2] = static_cast<float>(temp[2]) / 255.0f;
-
-				gEngfuncs.Con_Printf("### fog_colour1 = '%s'\n", token);
-			}
-
-			if (strcmp(keyname, "fog_colour2") == 0)
-			{
-				int temp[3] = {};
-				sscanf(token, "%i %i %i", &temp[0], &temp[1], &temp[2]);
-
-				new_p.fog_colour2[0] = static_cast<float>(temp[0]) / 255.0f;
-				new_p.fog_colour2[1] = static_cast<float>(temp[1]) / 255.0f;
-				new_p.fog_colour2[2] = static_cast<float>(temp[2]) / 255.0f;
-
-				gEngfuncs.Con_Printf("### fog_colour2 = '%s'\n", token);
-			}
-
-			if (strcmp(keyname, "fog_density") == 0)
-			{
-				new_p.fog_density = static_cast<float>(atof(token));
-				gEngfuncs.Con_Printf("### fog_density = '%s'\n", token);
-			}
-
-			if (strcmp(keyname, "fog_angle") == 0)
-			{
-				new_p.fog_angle = static_cast<float>(atof(token));
-				gEngfuncs.Con_Printf("### fog_angle = '%s'\n", token);
-			}
-		}
-
-		if (found == true)
-		{
-			s_world_p = new_p;
-			return;
-		}
+			    found = false;
+		    });
 	}
 }

@@ -19,130 +19,170 @@ defined by the Mozilla Public License, v. 2.0.
 #include <math.h>
 #include "ic/base.hpp"
 
+#include "temp-entities.hpp"
 #include "particles.hpp"
 
 
-static constexpr int MAX_PARTICLES = 32;
-static constexpr float DUST_PARTICLES_LIFE = 0.5f; // Seconds
-
-struct Particle
-{
-	float life;
-	float gravity;
-	Ic::Vector3 position;
-	Ic::Vector3 force;
-
-	Ic::Vector4 colour;
-};
-
-
-static float s_prev_time;
-static HSPRITE s_dust_sprite;
 static uint16_t s_rng = 123;
-
-static Particle s_dust_particles[MAX_PARTICLES]; // Nothing fancy
-static cl_entity_t s_dust_particles_entities[MAX_PARTICLES] = {};
+static HSPRITE s_dust_sprite;
 
 
 void Ic::ParticlesInitialise()
 {
-	s_prev_time = gEngfuncs.GetClientTime();
 	s_dust_sprite = gEngfuncs.pfnSPR_Load("sprites/dust.spr");
-
-	for (Particle* p = s_dust_particles; p < s_dust_particles + MAX_PARTICLES; p += 1)
-	{
-		p->life = 0.0f;
-	}
 }
 
 
-static void sUpdateParticles()
+struct Dust
 {
-	const float time = gEngfuncs.GetClientTime();
-	const float dt = time - s_prev_time;
-	s_prev_time = time;
+	static constexpr float LIFE = 0.5f; // Seconds
 
-	const float friction = expf(-2.0f * dt);
+	Ic::Vector3 position;
+	Ic::Vector3 force;
+	Ic::Vector4 colour;
+	float life;
+	float gravity;
 
-	for (Particle* p = s_dust_particles; p < s_dust_particles + MAX_PARTICLES; p += 1)
+	static void CreateCallback(float dt, void* user_data, cl_entity_t* entity)
 	{
-		p->life -= dt;
-		if (p->life <= 0.0f)
-			continue;
+		Dust* data = reinterpret_cast<Dust*>(user_data);
 
-		p->position = Add(p->position, Scale(p->force, dt));
-		p->force = Scale(p->force, friction);
-		p->force.z += p->gravity;
+		entity->origin[0] = data->position.x;
+		entity->origin[1] = data->position.y;
+		entity->origin[2] = data->position.z;
+
+		data->life = Dust::LIFE;
+
+		entity->model = (model_s*)(gEngfuncs.GetSpritePointer(s_dust_sprite)); // Nasty 'const' conversion
+
+		entity->curstate.rendermode = kRenderTransAlpha; // Only mode that more or less works in Software and OpenGl
+		entity->curstate.rendercolor.r = static_cast<byte>(data->colour[0] * 255.0f);
+		entity->curstate.rendercolor.g = static_cast<byte>(data->colour[1] * 255.0f);
+		entity->curstate.rendercolor.b = static_cast<byte>(data->colour[2] * 255.0f);
 	}
-}
 
-
-void Ic::ParticlesEntities()
-{
-	model_s* sprite_as_model = (model_s*)(gEngfuncs.GetSpritePointer(s_dust_sprite)); // Nasty 'const' conversion
-
-	sUpdateParticles();
-
-	for (const Particle* p = s_dust_particles; p < s_dust_particles + MAX_PARTICLES; p += 1)
+	static int UpdateCallback(float dt, void* user_data, cl_entity_t* entity)
 	{
-		if (p->life <= 0.0f)
-			continue;
+		Dust* data = reinterpret_cast<Dust*>(user_data);
 
-		const int index = static_cast<int>(p - s_dust_particles);
-		cl_entity_s* ent = s_dust_particles_entities + index;
+		data->life -= dt;
+		if (data->life <= 0.0f)
+			return 1;
 
-		ent->index = index + 123;     // It cannot be zero, and that 123 is an offset for... just
-		ent->model = sprite_as_model; // in case, not override Bench_AddObjects(), Game_AddObjects()
-		                              // and GetClientVoiceMgr(), objects
+		const float friction = expf(-2.0f * dt);
 
-		ent->curstate.rendermode = kRenderTransAlpha; // Only mode that more or less works in Software and OpenGL
-		ent->curstate.renderamt =
-		    static_cast<int>(p->life * 255.0f * (1.0f / DUST_PARTICLES_LIFE) * p->colour[3]); // Only in OpenGL
-		ent->curstate.rendercolor.r = static_cast<byte>(p->colour[0] * 255.0f);
-		ent->curstate.rendercolor.g = static_cast<byte>(p->colour[1] * 255.0f);
-		ent->curstate.rendercolor.b = static_cast<byte>(p->colour[2] * 255.0f);
+		data->position = Add(data->position, Scale(data->force, dt));
+		data->force = Scale(data->force, friction);
+		data->force.z += data->gravity * dt;
 
-		ent->origin[0] = p->position.x;
-		ent->origin[1] = p->position.y;
-		ent->origin[2] = p->position.z;
+		entity->origin[0] = data->position.x;
+		entity->origin[1] = data->position.y;
+		entity->origin[2] = data->position.z;
 
-		gEngfuncs.CL_CreateVisibleEntity(ET_TEMPENTITY, ent);
+		entity->curstate.renderamt =
+		    static_cast<int>(data->life * 255.0f * (1.0f / LIFE) * data->colour[3]); // Only in OpenGL
+
+		return 0;
 	}
-}
+};
 
 
-void Ic::DustParticles(int number, Ic::Vector3 position, Ic::Vector3 force, float gravity, Ic::Vector4 colour)
+void Ic::DustParticles(int number, Vector3 position, Vector3 force, float gravity, Vector4 colour, float randomness)
 {
+	Dust p;
+
+	p.position = position;
+	p.gravity = gravity;
+	p.colour = colour;
+
 	for (int n = 0; n < number; n += 1)
 	{
-		Particle* p = nullptr;
-		Particle* oldest = s_dust_particles;
+		const float r1 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f * randomness;
+		const float r2 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f * randomness;
+		const float r3 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f * randomness;
 
-		for (Particle* i = s_dust_particles; i < s_dust_particles + MAX_PARTICLES; i += 1)
-		{
-			if (i->life <= 0.0f)
-			{
-				p = i;
-				goto found;
-			}
+		p.force = {force.x + r1, force.y + r2, force.z + r3};
 
-			if (i->life < oldest->life)
-				oldest = i;
-		}
-
-		if (p == nullptr)
-			p = oldest;
-
-	found:
-		const float r1 = (Ic::RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f;
-		const float r2 = (Ic::RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f;
-		const float r3 = (Ic::RandomFloat(&s_rng) * 2.0f - 1.0f) * 64.0f;
-
-		p->life = DUST_PARTICLES_LIFE;
-		p->gravity = gravity;
-		p->position = position;
-		p->force = {force.x + r1, force.y + r2, force.z + r3};
-
-		p->colour = colour;
+		CreateTempEntity(TempEntityType::Particle, Dust::CreateCallback, Dust::UpdateCallback, sizeof(Dust), &p);
 	}
+}
+
+
+struct Shell
+{
+	static constexpr float LIFE = 3.0f; // Seconds
+
+	Ic::Vector3 position;
+	Ic::Vector3 angle;
+	Ic::Vector3 force;
+	Ic::Vector3 a_force;
+	int type;
+	float life;
+
+	static void CreateCallback(float dt, void* user_data, cl_entity_t* entity)
+	{
+		Shell* data = reinterpret_cast<Shell*>(user_data);
+
+		entity->origin[0] = data->position.x;
+		entity->origin[1] = data->position.y;
+		entity->origin[2] = data->position.z;
+
+		entity->curstate.angles[0] = data->angle[0];
+		entity->curstate.angles[1] = data->angle[1];
+		entity->curstate.angles[2] = data->angle[2];
+
+		data->life = Shell::LIFE;
+
+		int temp;
+		if (data->type == 1)
+			entity->model = gEngfuncs.CL_LoadModel("models/shotgunshell.mdl", &temp);
+		else
+			entity->model = gEngfuncs.CL_LoadModel("models/shell.mdl", &temp);
+	}
+
+	static int UpdateCallback(float dt, void* user_data, cl_entity_t* entity)
+	{
+		Shell* data = reinterpret_cast<Shell*>(user_data);
+
+		data->life -= dt;
+		if (data->life <= 0.0f)
+			return 1;
+
+		const float friction = expf(-2.0f * dt);
+
+		data->position = Add(data->position, Scale(data->force, dt));
+		data->force = Scale(data->force, friction);
+		data->force.z -= 512.0f * dt;
+
+		data->angle = Add(data->angle, Scale(data->a_force, dt));
+
+		entity->origin[0] = data->position.x;
+		entity->origin[1] = data->position.y;
+		entity->origin[2] = data->position.z;
+
+		entity->curstate.angles[0] = data->angle[0];
+		entity->curstate.angles[1] = data->angle[1];
+		entity->curstate.angles[2] = data->angle[2];
+
+		return 0;
+	}
+};
+
+
+void Ic::ShellParticle(int type, Vector3 position, Vector3 force, Vector3 angle)
+{
+	Shell p;
+
+	p.position = position;
+	p.angle = angle;
+	p.force = force;
+
+	const float r1 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 128.0f;
+	const float r2 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 128.0f;
+	const float r3 = (RandomFloat(&s_rng) * 2.0f - 1.0f) * 128.0f;
+
+	p.a_force = {r1, r2, r3};
+	p.type = type;
+
+	CreateTempEntity(TempEntityType::Particle, Shell::CreateCallback, Shell::UpdateCallback, sizeof(Shell), &p);
 }
