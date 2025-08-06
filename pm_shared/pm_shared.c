@@ -2631,7 +2631,7 @@ void PM_NoClip()
 
 	for (i=0 ; i<3 ; i++)       // Determine x and y parts of velocity
 	{
-		wishvel[i] = pmove->forward[i]*fmove + pmove->right[i]*smove;
+		wishvel[i] = (pmove->forward[i]*fmove + pmove->right[i]*smove) * 4.0f;
 	}
 	wishvel[2] += pmove->cmd.upmove;
 

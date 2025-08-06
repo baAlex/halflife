@@ -24,6 +24,7 @@
 
 
 #include "ic/base.hpp"
+#include "ic/fog.hpp"
 
 
 extern cvar_t *tfc_newmodels;
@@ -1179,6 +1180,8 @@ StudioDrawModel
 */
 int CStudioModelRenderer::StudioDrawModel( int flags )
 {
+	Ic::FogDraw();
+
 	alight_t lighting;
 	vec3_t dir;
 
