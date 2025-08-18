@@ -28,6 +28,7 @@
 #include "ic/base.hpp"
 #include "ic/weapons.hpp"
 #include "ic/temp-entities.hpp"
+#include "ic/dev-nodes.hpp"
 
 #include <string.h>
 
@@ -44,6 +45,8 @@ static float s_accuracy[2];
 static float s_speed;
 static float s_max_speed;
 static Ic::Vector3 s_forward;
+static Ic::Vector3 s_position;
+static Ic::Vector3 s_look_end;
 
 static int s_developer_level;
 
@@ -133,6 +136,27 @@ void Ic::MessagesSetForward(Vector3 v)
 	s_forward = v; // TODO, maybe, some day, this needs to be normalized
 }
 
+void Ic::MessagesSetPosition(Vector3 v)
+{
+	s_position = v;
+
+	{
+		pmtrace_t tr;
+
+		Ic::Vector3 start = s_position;
+		Ic::Vector3 end = Add(s_position, Scale(s_forward, 8192.0f));
+
+		gEngfuncs.pEventAPI->EV_PushPMStates();
+		gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+		gEngfuncs.pEventAPI->EV_PlayerTrace((float*)(&start.x), (float*)(&end.x), PM_NORMAL, -1, &tr);
+		gEngfuncs.pEventAPI->EV_PopPMStates();
+
+		// gEngfuncs.pEfxAPI->R_ParticleLine((float*)(&start.x), tr.endpos, 0, 0, 255, 0.1f);
+
+		s_look_end = Ic::Vector3::FromPtr(tr.endpos);
+	}
+}
+
 
 bool Ic::GetIfDead()
 {
@@ -157,6 +181,16 @@ float Ic::GetSpeed()
 Ic::Vector3 Ic::GetForward()
 {
 	return s_forward;
+}
+
+Ic::Vector3 Ic::GetPosition()
+{
+	return s_position;
+}
+
+Ic::Vector3 Ic::GetLookEnd()
+{
+	return s_look_end;
 }
 
 const char* Ic::GetWeaponMode()
@@ -273,48 +307,6 @@ static void sParsieMcParserFace(char* data, C1 entity_field_callback, C2 entity_
 }
 
 
-struct DevCommentary
-{
-	Ic::Vector3 initial_position;
-
-	static void CreateCallback(float dt, void* user_data, cl_entity_t* entity)
-	{
-		DevCommentary* self = reinterpret_cast<DevCommentary*>(user_data);
-
-		// Calculate 48 units from floor, just to keep uniformity
-		{
-			pmtrace_t tr;
-
-			Ic::Vector3 end = self->initial_position;
-			end[2] -= 64;
-
-			gEngfuncs.pEventAPI->EV_PushPMStates();
-			gEngfuncs.pEventAPI->EV_SetTraceHull(2);
-			gEngfuncs.pEventAPI->EV_PlayerTrace((float*)(&self->initial_position.x), (float*)(&end.x), PM_NORMAL, -1,
-			                                    &tr);
-			gEngfuncs.pEventAPI->EV_PopPMStates();
-
-			self->initial_position.z = tr.endpos[2] + 48.0f;
-		}
-
-		// Set
-		entity->origin[0] = self->initial_position.x;
-		entity->origin[1] = self->initial_position.y;
-		entity->origin[2] = self->initial_position.z;
-
-		int temp;
-		entity->model = gEngfuncs.CL_LoadModel("models/commentary.mdl", &temp);
-	}
-
-	static int UpdateCallback(float dt, void* user_data, cl_entity_t* entity)
-	{
-		DevCommentary* self = reinterpret_cast<DevCommentary*>(user_data);
-		entity->curstate.angles[1] = fmodf(entity->curstate.angles[1] + 128.0f * dt, 360.0f);
-		return 0;
-	}
-};
-
-
 static Ic::Vector3 sStringToVector3(const char* string)
 {
 	int temp[3];
@@ -344,11 +336,11 @@ const void Ic::ParseWorldProperties()
 	if (world_entity == nullptr)
 		return;
 
-	// Create developer commentaries
+	// Create dev nodes
 	{
 		bool found = false;
 		Ic::Vector3 position = {};
-		char commentary[1024] = {};
+		char text[Ic::DEV_NODE_MAX_TEXT_LENGTH] = {};
 
 		sParsieMcParserFace(
 		    world_entity->model->entities,
@@ -356,10 +348,10 @@ const void Ic::ParseWorldProperties()
 		    {
 			    // gEngfuncs.Con_Printf("### Ic::EntityField: '%s' : '%s'\n", key, value);
 
-			    if (strcmp(key, "classname") == 0 && strcmp(value, "info_dev_message") == 0)
+			    if (strcmp(key, "classname") == 0 && strcmp(value, "info_dev_node") == 0)
 				    found = true;
-			    if (strcmp(key, "message") == 0)
-				    strncpy(commentary, value, 1024);
+			    if (strcmp(key, "text") == 0)
+				    strncpy(text, value, Ic::DEV_NODE_MAX_TEXT_LENGTH);
 			    if (strcmp(key, "origin") == 0)
 				    position = sStringToVector3(value);
 		    },
@@ -369,14 +361,10 @@ const void Ic::ParseWorldProperties()
 
 			    if (found == true)
 			    {
-				    DevCommentary dev_commentary;
-				    dev_commentary.initial_position = position;
-
-				    Ic::CreateTempEntity(Ic::TempEntityType::Normal, DevCommentary::CreateCallback,
-				                         DevCommentary::UpdateCallback, sizeof(DevCommentary), &dev_commentary);
+				    Ic::CreateDevNode(position, text);
 
 				    position = {0};
-				    commentary[0] = 0;
+				    text[0] = 0;
 			    }
 
 			    found = false;

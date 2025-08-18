@@ -20,6 +20,7 @@
 #include "APIProxy.h"
 
 #include <math.h>
+#include <string.h>
 
 #include "hud.hpp"
 #include "ic/base.hpp"
@@ -34,14 +35,40 @@ static int s_margin = 15; // TODO, should change according resolution
 static float s_prev_time;
 
 
+static constexpr int ANTI_BLEEDING = 1; // To substract from dimensions as fonts have an extra pixel to combat bleeding
 static constexpr int WHITE[3] = {255, 255, 255};
 static constexpr int ACCENT[3] = {234, 0, 39};
 
 
 static int sFontHeight(HSPRITE font)
 {
-	// Less one as fonts have am extra pixel to combat bleeding
-	return gEngfuncs.pfnSPR_Height(font, static_cast<int>('\n')) - 1;
+	return gEngfuncs.pfnSPR_Height(font, static_cast<int>('\n')) - ANTI_BLEEDING;
+}
+
+static void sTextDimensions(const char* text, HSPRITE font, int* out_w, int* out_h)
+{
+	int w_acc = 0;
+	int w_current_line_acc = 0;
+	int h_acc = 0;
+
+	for (const char* c = text; *c != 0x00; c += 1)
+	{
+		const int frame = static_cast<int>(*c);
+
+		if (*c == '\n')
+		{
+			w_acc = Ic::Max(w_acc, w_current_line_acc);
+			w_current_line_acc = 0;
+
+			h_acc += gEngfuncs.pfnSPR_Height(font, frame) - ANTI_BLEEDING;
+			continue;
+		}
+
+		w_current_line_acc += gEngfuncs.pfnSPR_Width(font, frame) - ANTI_BLEEDING;
+	}
+
+	*out_w = w_acc;
+	*out_h = h_acc + sFontHeight(font);
 }
 
 static void sDrawText(int x, int y, HSPRITE font, int r, int g, int b, const char* text)
@@ -58,12 +85,12 @@ static void sDrawText(int x, int y, HSPRITE font, int r, int g, int b, const cha
 		if (*c == '\n')
 		{
 			x2 = x;
-			y += gEngfuncs.pfnSPR_Height(font, frame) - 1; // Less one as fonts have am extra pixel to combat bleeding
+			y += gEngfuncs.pfnSPR_Height(font, frame) - ANTI_BLEEDING;
 			continue;
 		}
 
-		gEngfuncs.pfnSPR_DrawHoles(frame, x2, y, &rect);
-		x2 += gEngfuncs.pfnSPR_Width(font, frame) - 1; // Less one as fonts have am extra pixel to combat bleeding
+		gEngfuncs.pfnSPR_Draw(frame, x2, y, &rect);
+		x2 += gEngfuncs.pfnSPR_Width(font, frame) - ANTI_BLEEDING;
 	}
 }
 
@@ -128,6 +155,7 @@ class Crosshair
 
 	int m_h_w;
 	int m_v_h;
+	float m_hide;
 
   public:
 	void Initialise()
@@ -137,13 +165,20 @@ class Crosshair
 
 		m_h_w = gEngfuncs.pfnSPR_Width(m_horizontal, 0);
 		m_v_h = gEngfuncs.pfnSPR_Height(m_vertical, 0);
+
+		m_hide = 0.0f;
 	}
 
 	void Draw(float time, float dt)
 	{
 		(void)time;
-		(void)dt;
 		struct rect_s rect;
+
+		if (m_hide > 0.0f)
+		{
+			m_hide -= dt;
+			return;
+		}
 
 		{
 			// Accuracy should be around 0,1
@@ -171,11 +206,98 @@ class Crosshair
 			gEngfuncs.pfnSPR_DrawHoles(1, 4 + s_screen.iWidth / 2 - OFFSET, s_screen.iHeight / 2 - gap - m_v_h, &rect);
 		}
 	}
+
+	void Hide(float duration)
+	{
+		m_hide = duration;
+	}
+};
+
+
+class DevText
+{
+	HSPRITE m_font;
+	float m_life;
+
+	static constexpr size_t TEXT_BUFFER_LENGTH = 256;
+	static constexpr int LEFT_MARGIN = 40;
+
+	char m_text_buffer[TEXT_BUFFER_LENGTH];
+
+  public:
+	void Initialise()
+	{
+		m_font = gEngfuncs.pfnSPR_Load("sprites/720-font-dev-node.spr");
+		m_life = 0.0f;
+	}
+
+	void Draw(float time, float dt)
+	{
+		m_life -= dt;
+		if (m_life <= 0.0f)
+			return;
+
+		int width;
+		int height;
+		sTextDimensions(m_text_buffer, m_font, &width, &height);
+
+		sDrawText(LEFT_MARGIN, s_screen.iHeight / 2 - height / 2, m_font, WHITE[0], WHITE[1], WHITE[2], m_text_buffer);
+	}
+
+	void SetText(const char* text, float duration = 4.0f)
+	{
+		m_life = duration;
+
+		// Wrap text
+		const int RIGHT_MARGIN = s_screen.iWidth / 2 /*- LEFT_MARGIN*/;
+
+		int word_w = 0;
+		int line_w = LEFT_MARGIN;
+
+		char* out_cursor = m_text_buffer;
+		const char* in_cursor_start = text;
+		const char* in_end = text + strlen(text);
+		for (const char* in_cursor_end = text; in_cursor_end < (in_end + 1); in_cursor_end += 1)
+		{
+			const int character_w = gEngfuncs.pfnSPR_Width(m_font, static_cast<int>(*in_cursor_end)) - ANTI_BLEEDING;
+			word_w += character_w;
+			line_w += character_w;
+
+			if (*in_cursor_end == ' ' || *in_cursor_end == 0x00)
+			{
+				if (in_cursor_start > text) // Ignore first word
+				{
+					if (line_w <= RIGHT_MARGIN)
+					{
+						*out_cursor++ = ' ';
+					}
+					else
+					{
+						*out_cursor++ = '\n';
+						line_w = word_w + LEFT_MARGIN;
+					}
+				}
+
+				for (; (in_cursor_start < in_cursor_end) && (out_cursor < m_text_buffer + TEXT_BUFFER_LENGTH);
+				     in_cursor_start += 1, out_cursor += 1)
+					*out_cursor = *in_cursor_start;
+
+				if (*in_cursor_end == 0x00)
+					break;
+
+				in_cursor_start += 1;
+				word_w = 0;
+			}
+		}
+
+		*out_cursor = 0x00;
+	}
 };
 
 
 static DevDashboard s_dev_dashboard;
 static Crosshair s_crosshair;
+static DevText s_dev_text;
 
 
 void Ic::HudInitialise()
@@ -187,6 +309,7 @@ void Ic::HudInitialise()
 
 	s_dev_dashboard.Initialise();
 	s_crosshair.Initialise();
+	s_dev_text.Initialise();
 
 	HudSoftInitialise();
 }
@@ -209,4 +332,12 @@ void Ic::HudDraw(float time)
 		return;
 
 	s_crosshair.Draw(time, dt);
+	s_dev_text.Draw(time, dt);
+}
+
+
+void Ic::HudDevText(const char* text, float duration)
+{
+	s_dev_text.SetText(text, duration);
+	// s_crosshair.Hide(duration);
 }

@@ -81,15 +81,15 @@ void Ic::UpdateTempEntities()
 }
 
 
-int Ic::CreateTempEntity(TempEntityType type, CreateCallback create_callback, UpdateCallback update_callback,
-                         size_t user_data_size, void* initial_user_data)
+void* Ic::CreateTempEntity(TempEntityType type, CreateCallback create_callback, UpdateCallback update_callback,
+                           size_t user_data_size, void* initial_user_data)
 {
 	const float dt = sUpdateAndGetDelta();
 
 	if (user_data_size > USER_DATA_SIZE)
 	{
 		gEngfuncs.Con_Printf("Ic::CreateTempEntity() error, data size too large\n");
-		return 1;
+		return nullptr;
 	}
 
 	// Find an inactive spot, or the oldest one
@@ -108,12 +108,12 @@ int Ic::CreateTempEntity(TempEntityType type, CreateCallback create_callback, Up
 	{
 		switch (type)
 		{
-		case TempEntityType::Normal: return 1;
+		case TempEntityType::Normal: return nullptr;
 		case TempEntityType::Particle: ent = oldest; break;
 		}
 
 		if (ent == nullptr)
-			return 1;
+			return nullptr;
 	}
 
 	// Set
@@ -132,5 +132,5 @@ int Ic::CreateTempEntity(TempEntityType type, CreateCallback create_callback, Up
 
 	// Bye!
 	create_callback(dt, ent->user_data, &ent->engine_entity);
-	return 0;
+	return ent->user_data;
 }

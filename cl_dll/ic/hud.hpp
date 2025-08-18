@@ -22,6 +22,7 @@ namespace Ic
 void HudInitialise();
 void HudSoftInitialise();
 void HudDraw(float time);
+void HudDevText(const char* text, float duration = 4.0f);
 
 } // namespace Ic
 

@@ -27,6 +27,7 @@ extern "C"
 
 #include "ic/base.hpp"
 #include "ic/messages.hpp"
+#include "ic/dev-nodes.hpp"
 
 
 extern int g_iAlive;
@@ -467,6 +468,9 @@ void IN_Attack2Down(void)
 void IN_Attack2Up(void) {KeyUp(&in_attack2);}
 void IN_UseDown (void)
 {
+	if (Ic::DevNodesInterceptUse() == true)
+		return;
+
 	KeyDown(&in_use);
 	gHUD.m_Spectator.HandleButtonsDown( IN_USE );
 }

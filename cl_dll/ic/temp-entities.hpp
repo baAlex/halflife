@@ -28,8 +28,8 @@ enum class TempEntityType
 void InitialiseTempEntities();
 void UpdateTempEntities();
 
-int CreateTempEntity(TempEntityType, CreateCallback create_callback, UpdateCallback update_callback,
-                     size_t user_data_size, void* initial_user_data = nullptr);
+void* CreateTempEntity(TempEntityType, CreateCallback create_callback, UpdateCallback update_callback,
+                       size_t user_data_size, void* initial_user_data = nullptr);
 
 } // namespace Ic
 

@@ -35,6 +35,7 @@ DO_PM_SHARED_CC=$(CC) $(INCLUDEDIRS)  $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 #####################################################################
 
 HL1_OBJS = \
+	$(HL1_OBJ_DIR)/ic/dev-nodes.o \
 	$(HL1_OBJ_DIR)/ic/events.o \
 	$(HL1_OBJ_DIR)/ic/experiments.o \
 	$(HL1_OBJ_DIR)/ic/fog.o \

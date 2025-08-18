@@ -971,7 +971,7 @@ void ClientPrecache( void )
 
 	PRECACHE_MODEL("models/null.mdl");
 	PRECACHE_MODEL("models/v_smg.mdl");
-	PRECACHE_MODEL("models/commentary.mdl");
+	PRECACHE_MODEL("models/dev_node.mdl");
 	PRECACHE_MODEL("models/shell.mdl");
 	PRECACHE_MODEL("models/shotgunshell.mdl");
 }

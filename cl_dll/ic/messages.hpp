@@ -32,12 +32,15 @@ void MessagesSoftInitialise();
 void MessagesSetAccuracy(Side, float a);
 void MessagesSetSpeed(float s, float max_speed);
 void MessagesSetForward(Vector3 f);
+void MessagesSetPosition(Vector3 f);
 
 bool GetIfDead();
 int GetHealth();
 float GetAccuracy(Side);
 float GetSpeed();
 Vector3 GetForward();
+Vector3 GetPosition();
+Vector3 GetLookEnd();
 const char* GetWeaponMode();
 int GetChamberAmmo();
 int GetMagazineAmmo();

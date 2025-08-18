@@ -349,6 +349,7 @@ void CL_DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 		pparams->movevars->maxspeed);
 
 	Ic::MessagesSetForward({pparams->forward[0], pparams->forward[1], pparams->forward[2]});
+	Ic::MessagesSetPosition({pparams->vieworg[0], pparams->vieworg[1], pparams->vieworg[2]});
 
 	Ic::ViewUpdate(pparams);
 	Ic::FogDraw();
